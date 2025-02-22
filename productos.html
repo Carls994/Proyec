@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Productos</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        .search-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: white;
+            padding: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+        #search {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #product-list {
+            border-collapse: collapse;
+            width: 100%;
+            background: #e0f0ff;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 80px;
+        }
+        #product-list th {
+            background: #0066cc;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        #product-list td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        #product-list tr:nth-child(even) {
+            background: #b3d9ff;
+        }
+        #product-list tr:hover {
+            background: #80bfff;
+            cursor: pointer;
+        }
+        #popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 50px;
+            border: 2px solid #0066cc;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            width: 400px;
+            text-align: center;
+            z-index: 1000;
+        }
+        #popup p {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #0066cc;
+        }
+        .close-btn:hover {
+            color: #004999;
+        }
+        #error-message {
+            color: red;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" id="search" placeholder="Buscar producto...">
+    </div>
+    <div id="error-message">Error al cargar los datos. Verifique la conexión o el archivo fuente.</div>
+    <table id="product-list">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Precio Venta</th>
+                <th>Precio Descuento</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+    <div id="popup">
+        <button class="close-btn" onclick="cerrarPopup()">&times;</button>
+        <p id="popup-nombre"></p>
+        <p id="popup-precio-venta"></p>
+        <p id="popup-precio-descuento"></p>
+    </div>
+    <script>
+        let productos = [];
+        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTjl9i6edwoCwg8rzlCLwCTVPp30DfrKb5zvyffiJMYXfBOcuw2LUv5MpJYHdtStQ/pub?output=csv";
+
+        function cargarExcelDesdeGoogleSheets() {
+            fetch(GOOGLE_SHEETS_CSV_URL)
+                .then(response => response.text())
+                .then(csv => {
+                    const rows = csv.split("\n").map(row => row.split(","));
+                    productos = rows.slice(1).map(row => ({
+                        codigo: row[0] || '',
+                        nombre: row[1] || '',
+                        precioVenta: row[3] || '',
+                        precioDescuento: row[4] || ''
+                    })).filter(p => p.codigo && p.nombre);
+                    mostrarProductos(productos);
+                    document.getElementById('error-message').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error("Error cargando el archivo desde Google Sheets:", error);
+                    document.getElementById('error-message').style.display = 'block';
+                });
+        }
+
+        function buscarProducto(event) {
+            let query = event.target.value.toLowerCase().replace(/%/g, '.*');
+            const regex = new RegExp(query, 'i');
+            const filtrados = productos.filter(p => regex.test(p.codigo) || regex.test(p.nombre));
+            mostrarProductos(filtrados);
+        }
+
+        function mostrarProductos(lista) {
+            const tbody = document.querySelector('#product-list tbody');
+            tbody.innerHTML = '';
+            lista.forEach(p => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${p.codigo}</td>
+                    <td>${p.nombre}</td>
+                    <td>${p.precioVenta}</td>
+                    <td>${p.precioDescuento}</td>
+                `;
+                row.addEventListener('click', () => mostrarPopup(p));
+                tbody.appendChild(row);
+            });
+        }
+
+        function mostrarPopup(producto) {
+            document.getElementById('popup-nombre').innerText = producto.nombre;
+            document.getElementById('popup-precio-venta').innerText = producto.precioVenta;
+            document.getElementById('popup-precio-descuento').innerText = producto.precioDescuento;
+            document.getElementById('popup').style.display = 'block';
+        }
+
+        function cerrarPopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+
+        document.getElementById('search').addEventListener('input', buscarProducto);
+        window.onload = cargarExcelDesdeGoogleSheets;
+    </script>
+</body>
+</html>
