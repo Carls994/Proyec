@@ -134,6 +134,10 @@
                         precioVenta: row[3] || '',
                         precioDescuento: row[4] || ''
                     })).filter(p => p.codigo && p.nombre);
+                    
+                    // Ordenar productos de A a Z por nombre
+                    productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+                    
                     mostrarProductos(productos);
                     document.getElementById('error-message').style.display = 'none';
                 })
