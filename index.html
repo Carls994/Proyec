@@ -21,6 +21,13 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             z-index: 1000;
         }
+        #last-update {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 100px; /* Ajuste para evitar superposición */
+            color: #0066cc;
+        }
         #search {
             width: 100%;
             padding: 12px;
@@ -34,7 +41,7 @@
             background: #e0f0ff;
             border-radius: 5px;
             overflow: hidden;
-            margin-top: 80px;
+            margin-top: 20px;
         }
         #product-list th {
             background: #0066cc;
@@ -70,9 +77,12 @@
             z-index: 1000;
         }
         #popup p {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: bold;
             margin: 15px 0;
+        }
+        #popup-precio-descuento {
+            color: red;
         }
         .close-btn {
             position: absolute;
@@ -101,6 +111,7 @@
     <div class="search-container">
         <input type="text" id="search" placeholder="Buscar producto...">
     </div>
+    <p id="last-update">Última actualización: Cargando...</p>
     <div id="error-message">Error al cargar los datos. Verifique la conexión o el archivo fuente.</div>
     <table id="product-list">
         <thead>
@@ -128,16 +139,14 @@
                 .then(response => response.text())
                 .then(csv => {
                     const rows = csv.split("\n").map(row => row.split(","));
+                    document.getElementById('last-update').textContent = "Última actualización: " + (rows[0][5] || "Desconocida");
                     productos = rows.slice(1).map(row => ({
                         codigo: row[0] || '',
                         nombre: row[1] || '',
                         precioVenta: row[3] || '',
                         precioDescuento: row[4] || ''
                     })).filter(p => p.codigo && p.nombre);
-                    
-                    // Ordenar productos de A a Z por nombre
                     productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                    
                     mostrarProductos(productos);
                     document.getElementById('error-message').style.display = 'none';
                 })
@@ -148,7 +157,7 @@
         }
 
         function buscarProducto(event) {
-            let query = event.target.value.toLowerCase().replace(/%/g, '.*');
+            let query = event.target.value.trim().toLowerCase().replace(/%/g, '.*');
             const regex = new RegExp(query, 'i');
             const filtrados = productos.filter(p => regex.test(p.codigo) || regex.test(p.nombre));
             mostrarProductos(filtrados);
