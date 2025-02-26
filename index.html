@@ -26,7 +26,7 @@
             text-align: center;
             font-size: 16px;
             font-weight: bold;
-            margin-top: 100px; /* Ajuste para evitar superposición */
+            margin-top: 100px;
             color: #0066cc;
         }
         #search {
@@ -133,7 +133,7 @@
     </div>
     <script>
         let productos = [];
-        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTjl9i6edwoCwg8rzlCLwCTVPp30DfrKb5zvyffiJMYXfBOcuw2LUv5MpJYHdtStQ/pub?output=csv";
+        const GOOGLE_SHEETS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSlFHXkkMzep0I6cbUMFkE7G3ICvz5McL2AtyulMUEtRp85ywHSeStvORfB0rWZbp0Lrq4qxXZlc3y0/pub?output=csv";
 
         function cargarExcelDesdeGoogleSheets() {
             fetch(GOOGLE_SHEETS_CSV_URL)
