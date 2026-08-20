@@ -18,11 +18,16 @@ interface Gasto {
 }
 
 export default function AdminPage() {
+  // Estado de Autenticación
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+
+  // Estados de Datos
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para el nuevo gasto
+  // Estados para Formulario de Gastos
   const [conceptoGasto, setConceptoGasto] = useState('');
   const [montoGasto, setMontoGasto] = useState('');
   const [submittingGasto, setSubmittingGasto] = useState(false);
@@ -48,10 +53,42 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    if (isAuthenticated) {
+      cargarDatos();
+    }
+  }, [isAuthenticated]);
 
-  // Totales de Caja
+  // Login Handler
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === 'admin123') { // Reemplaza por tu contraseña
+      setIsAuthenticated(true);
+    } else {
+      alert('❌ Contraseña incorrecta');
+    }
+  };
+
+  // Cambiar Estado de Pago de Integrante
+  const handleCambiarEstado = async (id: number, nuevoEstado: string, montoPagado: number = 0) => {
+    try {
+      const res = await fetch('/api/integrantes', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, estado: nuevoEstado, monto_pagado: montoPagado }),
+      });
+
+      if (res.ok) {
+        await cargarDatos();
+      } else {
+        alert('Error al actualizar integrante.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error de conexión.');
+    }
+  };
+
+  // Cálculos de Caja
   let totalRecaudado = 0;
   integrantes.forEach((i) => {
     const est = String(i.estado).toLowerCase();
@@ -71,7 +108,7 @@ export default function AdminPage() {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
-  // Guardar Nuevo Gasto
+  // Registrar Gasto
   const handleRegistrarGasto = async (e: React.FormEvent) => {
     e.preventDefault();
     const montoNum = Number(montoGasto);
@@ -82,7 +119,7 @@ export default function AdminPage() {
     }
 
     if (montoNum > saldoEnCaja) {
-      alert(`❌ Saldo insuficiente. Disponible actual: ${formatGs(saldoEnCaja)}`);
+      alert(`❌ Saldo insuficiente en caja. Disponible: ${formatGs(saldoEnCaja)}`);
       return;
     }
 
@@ -92,10 +129,7 @@ export default function AdminPage() {
       const res = await fetch('/api/gastos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          concepto: conceptoGasto,
-          monto: montoNum,
-        }),
+        body: JSON.stringify({ concepto: conceptoGasto, monto: montoNum }),
       });
 
       if (res.ok) {
@@ -107,110 +141,160 @@ export default function AdminPage() {
       }
     } catch (error) {
       console.error(error);
-      alert('Error de conexión al registrar el gasto.');
+      alert('Error de conexión.');
     } finally {
       setSubmittingGasto(false);
     }
   };
 
+  // Vista de Login si no está autenticado
+  if (!isAuthenticated) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="w-full max-w-sm p-6 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
+          <h1 className="text-lg font-bold text-center text-white">🔒 Acceso Administrador</h1>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Contraseña</label>
+            <input
+              type="password"
+              placeholder="Ingrese la contraseña"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+          <button
+            type="submit"
+            className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white rounded-lg transition-colors"
+          >
+            Ingresar al Panel
+          </button>
+          <div className="text-center">
+            <Link href="/" className="text-xs text-slate-500 hover:underline">← Volver al Inicio</Link>
+          </div>
+        </form>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 flex flex-col items-center">
       <div className="w-full max-w-2xl space-y-6">
         
-        {/* Encabezado */}
+        {/* Header */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-4">
           <div>
             <h1 className="text-xl font-black text-white">Panel Administrador</h1>
-            <p className="text-xs text-slate-400">Control de Integrantes y Registro de Gastos</p>
+            <p className="text-xs text-slate-400">Control de Integrantes y Caja</p>
           </div>
           <Link
             href="/"
             className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition-colors"
           >
-            ← Inicio
+            ← Volver
           </Link>
         </div>
 
-        {/* Resumen Financiero */}
+        {/* Resumen de Caja */}
         <div className="grid grid-cols-3 gap-3 text-center">
           <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Ingresos</span>
             <span className="text-sm font-black text-emerald-400 mt-1 block">{formatGs(totalRecaudado)}</span>
           </div>
-
           <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
             <span className="text-[10px] font-bold text-slate-400 uppercase block">Gastos</span>
             <span className="text-sm font-black text-rose-400 mt-1 block">{formatGs(totalGastos)}</span>
           </div>
-
           <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/40">
             <span className="text-[10px] font-bold text-cyan-400 uppercase block">Disponible</span>
             <span className="text-sm font-black text-cyan-200 mt-1 block">{formatGs(saldoEnCaja)}</span>
           </div>
         </div>
 
-        {/* Formulario de Registro de Gastos */}
+        {/* Sección 1: Gestión de Integrantes / Pagos */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            💸 Registrar Egreso de Caja
+          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+            👥 Registro de Pagos de Integrantes
           </h2>
 
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {integrantes.map((i) => {
+              const est = String(i.estado).toLowerCase();
+              return (
+                <div key={i.id} className="p-3 rounded-lg bg-slate-950 border border-slate-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
+                  <span className="font-semibold text-slate-200">{i.nombre}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCambiarEstado(i.id, 'Pendiente', 0)}
+                      className={`px-2 py-1 rounded text-[10px] font-bold ${est.includes('pendiente') ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-400'}`}
+                    >
+                      Pendiente
+                    </button>
+                    <button
+                      onClick={() => {
+                        const monto = prompt('Ingrese el monto abonado (Gs.):', String(i.monto_pagado || 50000));
+                        if (monto !== null) handleCambiarEstado(i.id, 'Parcial', Number(monto));
+                      }}
+                      className={`px-2 py-1 rounded text-[10px] font-bold ${est.includes('parcial') ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-400'}`}
+                    >
+                      Parcial
+                    </button>
+                    <button
+                      onClick={() => handleCambiarEstado(i.id, 'Pagado', MONTO_POR_INTEGRANTE)}
+                      className={`px-2 py-1 rounded text-[10px] font-bold ${est.includes('pagado') || i.estado === true ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'}`}
+                    >
+                      Pagado
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sección 2: Registrar Nuevo Gasto */}
+        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+            💸 Registrar Egreso / Gasto
+          </h2>
           <form onSubmit={handleRegistrarGasto} className="space-y-3">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Concepto / Destino del Dinero</label>
-              <input
-                type="text"
-                placeholder="Ej: Pago de alquiler o compra de insumos"
-                value={conceptoGasto}
-                onChange={(e) => setConceptoGasto(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">Monto en Gs.</label>
-              <input
-                type="number"
-                placeholder="Ej: 150000"
-                value={montoGasto}
-                onChange={(e) => setMontoGasto(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
+            <input
+              type="text"
+              placeholder="Concepto o destino del dinero"
+              value={conceptoGasto}
+              onChange={(e) => setConceptoGasto(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+            />
+            <input
+              type="number"
+              placeholder="Monto en Gs."
+              value={montoGasto}
+              onChange={(e) => setMontoGasto(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
+            />
             <button
               type="submit"
               disabled={submittingGasto}
-              className="w-full py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all disabled:opacity-50"
+              className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all disabled:opacity-50"
             >
               {submittingGasto ? 'Guardando...' : 'Confirmar Gasto'}
             </button>
           </form>
         </div>
 
-        {/* Historial de Gastos */}
+        {/* Sección 3: Historial de Gastos */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
           <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
             📋 Historial de Gastos Registrados
           </h2>
-
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+          <div className="space-y-2 max-h-48 overflow-y-auto">
             {gastos.length === 0 ? (
-              <p className="text-xs text-slate-500 italic text-center py-3">No hay gastos registrados.</p>
+              <p className="text-xs text-slate-500 italic text-center py-2">No hay gastos registrados.</p>
             ) : (
               gastos.map((g) => (
-                <div key={g.id} className="p-3 rounded-lg bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
-                  <div>
-                    <span className="font-semibold text-slate-200 block">{g.concepto}</span>
-                    {g.fecha && (
-                      <span className="text-[10px] text-slate-500">
-                        {new Date(g.fecha).toLocaleDateString('es-PY')}
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-mono font-bold text-rose-400 text-sm">
-                    -{formatGs(Number(g.monto))}
-                  </span>
+                <div key={g.id} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 flex justify-between items-center text-xs">
+                  <span className="font-semibold text-slate-200">{g.concepto}</span>
+                  <span className="font-mono font-bold text-rose-400">-{formatGs(Number(g.monto))}</span>
                 </div>
               ))
             )}
