@@ -37,7 +37,7 @@ export default function Home() {
         setGastos(Array.isArray(dataGastos) ? dataGastos : []);
       } catch (err) {
         console.error('Error cargando datos:', err);
-      } finally {
+      } font-medium
         setLoading(false);
       }
     }
@@ -124,7 +124,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-600/20 hover:bg-pink-600/40 border border-pink-500/40 text-pink-300 hover:text-white font-semibold transition-all"
             >
-              📸 <span>IG del lugar</span>
+              📸 <span>Ver Instagram</span>
             </a>
 
             <a
@@ -192,7 +192,7 @@ export default function Home() {
                   onClick={() => setModalAbierto(true)}
                   className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/40 border border-cyan-400/50 text-cyan-200 text-xs font-bold transition-all active:scale-95"
                 >
-                  🔍 Detalles
+                  🔍 Ver Detalles
                 </button>
               </div>
             </div>
@@ -263,6 +263,7 @@ export default function Home() {
               <button
                 onClick={() => setModalAbierto(false)}
                 className="text-slate-400 hover:text-white text-lg font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                aria-label="Cerrar modal"
               >
                 ✕
               </button>
@@ -282,7 +283,7 @@ export default function Home() {
 
             {/* Historial de Gastos */}
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Egresos / Señas Registradas</h4>
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Egresos Registrados</h4>
               <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
                 {gastos.length === 0 ? (
                   <p className="text-slate-500 italic text-center py-3">No hay gastos registrados aún.</p>
@@ -303,12 +304,6 @@ export default function Home() {
               <span className="font-extrabold text-sm text-cyan-200 font-mono">{formatGs(saldoEnCaja)}</span>
             </div>
 
-            <button
-              onClick={() => setModalAbierto(false)}
-              className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl transition-colors"
-            >
-              Cerrar Ventana
-            </button>
           </div>
         </div>
       )}
