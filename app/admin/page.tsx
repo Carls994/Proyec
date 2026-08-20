@@ -10,6 +10,13 @@ interface Integrante {
   monto_pagado: number;
 }
 
+interface Gasto {
+  id: number;
+  concepto: string;
+  monto: number;
+  fecha?: string;
+}
+
 export default function AdminPage() {
   const [autenticado, setAutenticado] = useState(false);
   const [username, setUsername] = useState('');
@@ -17,29 +24,51 @@ export default function AdminPage() {
   const [errorLogin, setErrorLogin] = useState('');
 
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
+  const [gastos, setGastos] = useState<Gasto[]>([]);
+
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoEstado, setNuevoEstado] = useState('Pendiente');
   const [nuevoMonto, setNuevoMonto] = useState<number>(0);
 
-  // Estados para edicion
+  // Estados para edicion de integrante
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [nombreEdit, setNombreEdit] = useState('');
+
+  // Estados para gastos
+  const [conceptoGasto, setConceptoGasto] = useState('');
+  const [montoGasto, setMontoGasto] = useState<number | ''>('');
+  const [submittingGasto, setSubmittingGasto] = useState(false);
+
+  const MONTO_POR_INTEGRANTE = 100000;
 
   const fetchIntegrantes = async () => {
     try {
       const res = await fetch('/api/integrantes');
       if (res.ok) {
         const data = await res.json();
-        setIntegrantes(data);
+        setIntegrantes(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error('Error al cargar integrantes:', err);
     }
   };
 
+  const fetchGastos = async () => {
+    try {
+      const res = await fetch('/api/gastos');
+      if (res.ok) {
+        const data = await res.json();
+        setGastos(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.error('Error al cargar gastos:', err);
+    }
+  };
+
   useEffect(() => {
     if (autenticado) {
       fetchIntegrantes();
+      fetchGastos();
     }
   }, [autenticado]);
 
@@ -61,7 +90,7 @@ export default function AdminPage() {
     }
   };
 
-  // CREATE
+  // CREATE INTEGRANTE
   const handleAgregar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nuevoNombre.trim()) return;
@@ -120,7 +149,7 @@ export default function AdminPage() {
     fetchIntegrantes();
   };
 
-  // DELETE
+  // DELETE INTEGRANTE
   const handleEliminar = async (id: number, nombre: string) => {
     if (confirm(`¿Estás seguro de que deseas eliminar a "${nombre}"?`)) {
       await fetch('/api/integrantes', {
@@ -129,6 +158,65 @@ export default function AdminPage() {
         body: JSON.stringify({ id }),
       });
       fetchIntegrantes();
+    }
+  };
+
+  // CÁLCULOS DE SALDOS Y CAJA
+  let totalRecaudado = 0;
+  integrantes.forEach((i) => {
+    const est = String(i.estado || '').toLowerCase();
+    const abonado = Number(i.monto_pagado) || 0;
+
+    if (est.includes('pagado')) {
+      totalRecaudado += MONTO_POR_INTEGRANTE;
+    } else if (est.includes('parcial')) {
+      totalRecaudado += abonado;
+    }
+  });
+
+  const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
+  const saldoEnCaja = totalRecaudado - totalGastos;
+
+  const formatGs = (amount: number) => {
+    return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
+  };
+
+  // REGISTRAR NUEVO GASTO
+  const handleRegistrarGasto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const montoNum = Number(montoGasto);
+
+    if (!conceptoGasto.trim() || !montoNum || montoNum <= 0) {
+      alert('⚠️ Ingrese un concepto válido y un monto mayor a 0 Gs.');
+      return;
+    }
+
+    if (montoNum > saldoEnCaja) {
+      alert(`❌ Saldo insuficiente en caja. Disponible actual: ${formatGs(saldoEnCaja)}`);
+      return;
+    }
+
+    setSubmittingGasto(true);
+
+    try {
+      const res = await fetch('/api/gastos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concepto: conceptoGasto, monto: montoNum }),
+      });
+
+      if (res.ok) {
+        setConceptoGasto('');
+        setMontoGasto('');
+        fetchGastos();
+      } else {
+        alert('Ocurrió un error al guardar el gasto.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error de conexión al registrar el gasto.');
+    } finally {
+      setSubmittingGasto(false);
     }
   };
 
@@ -189,6 +277,8 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-8 max-w-4xl mx-auto space-y-6">
+      
+      {/* Header Admin */}
       <div className="flex justify-between items-center border-b border-slate-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold">Panel Admin - Gestión CRUD</h1>
@@ -199,7 +289,25 @@ export default function AdminPage() {
         </Link>
       </div>
 
-      {/* CREATE: Formulario para Agregar */}
+      {/* TARJETAS DE SALDO Y CAJA */}
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg">
+          <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Recaudado</span>
+          <span className="text-sm sm:text-base font-black text-emerald-400 mt-1 block">{formatGs(totalRecaudado)}</span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg">
+          <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Gastos</span>
+          <span className="text-sm sm:text-base font-black text-rose-400 mt-1 block">{formatGs(totalGastos)}</span>
+        </div>
+
+        <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 shadow-lg">
+          <span className="text-[10px] font-bold text-cyan-400 uppercase block">Disponible Caja</span>
+          <span className="text-sm sm:text-base font-black text-cyan-200 mt-1 block">{formatGs(saldoEnCaja)}</span>
+        </div>
+      </div>
+
+      {/* CREATE: Formulario para Agregar Integrante */}
       <form onSubmit={handleAgregar} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap gap-3 items-center">
         <input
           type="text"
@@ -234,8 +342,11 @@ export default function AdminPage() {
         </button>
       </form>
 
-      {/* READ, UPDATE, DELETE: Lista Interactiva */}
+      {/* READ, UPDATE, DELETE: Lista Interactiva de Integrantes */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="p-3 bg-slate-900/90 border-b border-slate-800 font-bold text-xs text-slate-300 uppercase tracking-wider">
+          👥 Listado de Integrantes
+        </div>
         <div className="divide-y divide-slate-800">
           {integrantes.length === 0 ? (
             <div className="p-6 text-center text-slate-500 text-sm">
@@ -326,6 +437,67 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* FORMULARIO DE REGISTRO DE GASTOS */}
+      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3 shadow-xl">
+        <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+          💸 Registrar Egreso / Gasto de Caja
+        </h2>
+        <form onSubmit={handleRegistrarGasto} className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Concepto o destino del dinero (ej: Alquiler)"
+            value={conceptoGasto}
+            onChange={(e) => setConceptoGasto(e.target.value)}
+            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+            required
+          />
+          <input
+            type="number"
+            placeholder="Monto Gs."
+            value={montoGasto}
+            onChange={(e) => setMontoGasto(e.target.value === '' ? '' : Number(e.target.value))}
+            className="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+            required
+          />
+          <button
+            type="submit"
+            disabled={submittingGasto}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {submittingGasto ? 'Guardando...' : 'Confirmar Gasto'}
+          </button>
+        </form>
+      </div>
+
+      {/* HISTORIAL DE GASTOS REGISTRADOS */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
+        <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+          📋 Historial de Gastos Registrados
+        </h2>
+        <div className="space-y-2 max-h-48 overflow-y-auto">
+          {gastos.length === 0 ? (
+            <p className="text-xs text-slate-500 italic text-center py-2">No hay gastos registrados aún.</p>
+          ) : (
+            gastos.map((g) => (
+              <div key={g.id} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
+                <div>
+                  <span className="font-semibold text-slate-200 block">{g.concepto}</span>
+                  {g.fecha && (
+                    <span className="text-[10px] text-slate-500">
+                      {new Date(g.fecha).toLocaleDateString('es-PY')}
+                    </span>
+                  )}
+                </div>
+                <span className="font-mono font-bold text-rose-400 text-sm">
+                  -{formatGs(Number(g.monto))}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
