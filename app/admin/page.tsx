@@ -18,16 +18,11 @@ interface Gasto {
 }
 
 export default function AdminPage() {
-  // Estado de Autenticación
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-
-  // Estados de Datos
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para Formulario de Gastos
+  // Formulario de Gastos
   const [conceptoGasto, setConceptoGasto] = useState('');
   const [montoGasto, setMontoGasto] = useState('');
   const [submittingGasto, setSubmittingGasto] = useState(false);
@@ -53,22 +48,10 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
-      cargarDatos();
-    }
-  }, [isAuthenticated]);
+    cargarDatos();
+  }, []);
 
-  // Login Handler
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordInput === 'admin123') { // Reemplaza por tu contraseña
-      setIsAuthenticated(true);
-    } else {
-      alert('❌ Contraseña incorrecta');
-    }
-  };
-
-  // Cambiar Estado de Pago de Integrante
+  // Cambiar estado de pago de integrante
   const handleCambiarEstado = async (id: number, nuevoEstado: string, montoPagado: number = 0) => {
     try {
       const res = await fetch('/api/integrantes', {
@@ -147,36 +130,6 @@ export default function AdminPage() {
     }
   };
 
-  // Vista de Login si no está autenticado
-  if (!isAuthenticated) {
-    return (
-      <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-        <form onSubmit={handleLogin} className="w-full max-w-sm p-6 bg-slate-900 border border-slate-800 rounded-xl space-y-4">
-          <h1 className="text-lg font-bold text-center text-white">🔒 Acceso Administrador</h1>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Contraseña</label>
-            <input
-              type="password"
-              placeholder="Ingrese la contraseña"
-              value={passwordInput}
-              onChange={(e) => setPasswordInput(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-sm focus:outline-none focus:border-indigo-500"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs text-white rounded-lg transition-colors"
-          >
-            Ingresar al Panel
-          </button>
-          <div className="text-center">
-            <Link href="/" className="text-xs text-slate-500 hover:underline">← Volver al Inicio</Link>
-          </div>
-        </form>
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 flex flex-col items-center">
       <div className="w-full max-w-2xl space-y-6">
@@ -185,13 +138,13 @@ export default function AdminPage() {
         <div className="flex justify-between items-center border-b border-slate-800 pb-4">
           <div>
             <h1 className="text-xl font-black text-white">Panel Administrador</h1>
-            <p className="text-xs text-slate-400">Control de Integrantes y Caja</p>
+            <p className="text-xs text-slate-400">Control de Integrantes y Gastos</p>
           </div>
           <Link
             href="/"
             className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition-colors"
           >
-            ← Volver
+            ← Volver al Inicio
           </Link>
         </div>
 
@@ -211,7 +164,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Sección 1: Gestión de Integrantes / Pagos */}
+        {/* Registro de Pagos de Integrantes */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
           <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
             👥 Registro de Pagos de Integrantes
@@ -252,7 +205,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {/* Sección 2: Registrar Nuevo Gasto */}
+        {/* Formulario de Gastos */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">
             💸 Registrar Egreso / Gasto
@@ -282,7 +235,7 @@ export default function AdminPage() {
           </form>
         </div>
 
-        {/* Sección 3: Historial de Gastos */}
+        {/* Historial de Gastos */}
         <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
           <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
             📋 Historial de Gastos Registrados
