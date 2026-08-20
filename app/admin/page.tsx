@@ -6,255 +6,326 @@ import Link from 'next/link';
 interface Integrante {
   id: number;
   nombre: string;
-  estado?: string | boolean;
-  monto_pagado?: number | string;
-}
-
-interface Gasto {
-  id: number;
-  concepto: string;
-  monto: number | string;
-  fecha?: string;
+  estado: string;
+  monto_pagado: number;
 }
 
 export default function AdminPage() {
+  const [autenticado, setAutenticado] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [errorLogin, setErrorLogin] = useState('');
+
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
-  const [gastos, setGastos] = useState<Gasto[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [nuevoNombre, setNuevoNombre] = useState('');
+  const [nuevoEstado, setNuevoEstado] = useState('Pendiente');
+  const [nuevoMonto, setNuevoMonto] = useState<number>(0);
 
-  // Formulario de Gastos
-  const [conceptoGasto, setConceptoGasto] = useState('');
-  const [montoGasto, setMontoGasto] = useState('');
-  const [submittingGasto, setSubmittingGasto] = useState(false);
+  // Estados para edicion
+  const [editandoId, setEditandoId] = useState<number | null>(null);
+  const [nombreEdit, setNombreEdit] = useState('');
 
-  const MONTO_POR_INTEGRANTE = 100000;
-
-  const cargarDatos = async () => {
+  const fetchIntegrantes = async () => {
     try {
-      const [resInt, resGas] = await Promise.all([
-        fetch('/api/integrantes', { cache: 'no-store' }),
-        fetch('/api/gastos', { cache: 'no-store' }),
-      ]);
-      const dataInt = await resInt.json();
-      const dataGas = await resGas.json();
-
-      setIntegrantes(Array.isArray(dataInt) ? dataInt : []);
-      setGastos(Array.isArray(dataGas) ? dataGas : []);
+      const res = await fetch('/api/integrantes');
+      if (res.ok) {
+        const data = await res.json();
+        setIntegrantes(data);
+      }
     } catch (err) {
-      console.error('Error al cargar datos:', err);
-    } finally {
-      setLoading(false);
+      console.error('Error al cargar integrantes:', err);
     }
   };
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
-
-  // Cambiar estado de pago de integrante
-  const handleCambiarEstado = async (id: number, nuevoEstado: string, montoPagado: number = 0) => {
-    try {
-      const res = await fetch('/api/integrantes', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, estado: nuevoEstado, monto_pagado: montoPagado }),
-      });
-
-      if (res.ok) {
-        await cargarDatos();
-      } else {
-        alert('Error al actualizar integrante.');
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error de conexión.');
+    if (autenticado) {
+      fetchIntegrantes();
     }
-  };
+  }, [autenticado]);
 
-  // Cálculos de Caja
-  let totalRecaudado = 0;
-  integrantes.forEach((i) => {
-    const est = String(i.estado).toLowerCase();
-    const abonado = Number(i.monto_pagado) || 0;
-
-    if (est.includes('pagado') || i.estado === true) {
-      totalRecaudado += MONTO_POR_INTEGRANTE;
-    } else if (est.includes('parcial')) {
-      totalRecaudado += abonado;
-    }
-  });
-
-  const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
-  const saldoEnCaja = totalRecaudado - totalGastos;
-
-  const formatGs = (amount: number) => {
-    return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
-  };
-
-  // Registrar Gasto
-  const handleRegistrarGasto = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const montoNum = Number(montoGasto);
+    setErrorLogin('');
 
-    if (!conceptoGasto.trim() || !montoNum || montoNum <= 0) {
-      alert('⚠️ Ingrese un concepto válido y un monto mayor a 0 Gs.');
-      return;
-    }
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
 
-    if (montoNum > saldoEnCaja) {
-      alert(`❌ Saldo insuficiente en caja. Disponible: ${formatGs(saldoEnCaja)}`);
-      return;
-    }
-
-    setSubmittingGasto(true);
-
-    try {
-      const res = await fetch('/api/gastos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ concepto: conceptoGasto, monto: montoNum }),
-      });
-
-      if (res.ok) {
-        setConceptoGasto('');
-        setMontoGasto('');
-        await cargarDatos();
-      } else {
-        alert('Ocurrió un error al guardar el gasto.');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Error de conexión.');
-    } finally {
-      setSubmittingGasto(false);
+    if (res.ok) {
+      setAutenticado(true);
+    } else {
+      const data = await res.json();
+      setErrorLogin(data.error || 'Credenciales inválidas');
     }
   };
+
+  // CREATE
+  const handleAgregar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoNombre.trim()) return;
+
+    let monto = 0;
+    if (nuevoEstado === 'Pagado') monto = 100000;
+    if (nuevoEstado === 'Parcial') monto = nuevoMonto;
+
+    await fetch('/api/integrantes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: nuevoNombre,
+        estado: nuevoEstado,
+        monto_pagado: monto,
+      }),
+    });
+
+    setNuevoNombre('');
+    setNuevoMonto(0);
+    setNuevoEstado('Pendiente');
+    fetchIntegrantes();
+  };
+
+  // UPDATE ESTADO
+  const handleCambiarEstado = async (id: number, estado: string, montoActual: number) => {
+    let monto = 0;
+    if (estado === 'Pagado') monto = 100000;
+    if (estado === 'Parcial') {
+      const resp = prompt('Ingrese el monto abonado (Gs.):', String(montoActual || 50000));
+      if (resp === null) return;
+      monto = Number(resp) || 0;
+    }
+
+    await fetch('/api/integrantes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, estado, monto_pagado: monto }),
+    });
+
+    fetchIntegrantes();
+  };
+
+  // UPDATE NOMBRE
+  const handleGuardarNombre = async (id: number) => {
+    if (!nombreEdit.trim()) return;
+
+    await fetch('/api/integrantes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, nombre: nombreEdit }),
+    });
+
+    setEditandoId(null);
+    setNombreEdit('');
+    fetchIntegrantes();
+  };
+
+  // DELETE
+  const handleEliminar = async (id: number, nombre: string) => {
+    if (confirm(`¿Estás seguro de que deseas eliminar a "${nombre}"?`)) {
+      await fetch('/api/integrantes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      fetchIntegrantes();
+    }
+  };
+
+  if (!autenticado) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="bg-slate-900 p-6 rounded-2xl border border-slate-800 w-full max-w-sm space-y-4 shadow-xl">
+          <div className="text-center space-y-1">
+            <h2 className="text-xl font-bold">Acceso Administrador</h2>
+            <p className="text-xs text-slate-400">Ingresa tus credenciales de acceso</p>
+          </div>
+
+          {errorLogin && (
+            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs text-center">
+              {errorLogin}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Usuario</label>
+              <input
+                type="text"
+                placeholder="Usuario"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-100"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-400 mb-1">Contraseña</label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-100"
+                required
+              />
+            </div>
+          </div>
+
+          <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-xl text-sm transition-colors">
+            Ingresar
+          </button>
+
+          <div className="text-center pt-2">
+            <Link href="/" className="text-xs text-slate-400 hover:underline">
+              ← Volver a la vista pública
+            </Link>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 flex flex-col items-center">
-      <div className="w-full max-w-2xl space-y-6">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-          <div>
-            <h1 className="text-xl font-black text-white">Panel Administrador</h1>
-            <p className="text-xs text-slate-400">Control de Integrantes y Gastos</p>
-          </div>
-          <Link
-            href="/"
-            className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 transition-colors"
-          >
-            ← Volver al Inicio
-          </Link>
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-8 max-w-4xl mx-auto space-y-6">
+      <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold">Panel Admin - Gestión CRUD</h1>
+          <p className="text-xs text-slate-400">Bienvenido, {username}</p>
         </div>
-
-        {/* Resumen de Caja */}
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block">Ingresos</span>
-            <span className="text-sm font-black text-emerald-400 mt-1 block">{formatGs(totalRecaudado)}</span>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
-            <span className="text-[10px] font-bold text-slate-400 uppercase block">Gastos</span>
-            <span className="text-sm font-black text-rose-400 mt-1 block">{formatGs(totalGastos)}</span>
-          </div>
-          <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/40">
-            <span className="text-[10px] font-bold text-cyan-400 uppercase block">Disponible</span>
-            <span className="text-sm font-black text-cyan-200 mt-1 block">{formatGs(saldoEnCaja)}</span>
-          </div>
-        </div>
-
-        {/* Registro de Pagos de Integrantes */}
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wider">
-            👥 Registro de Pagos de Integrantes
-          </h2>
-
-          <div className="space-y-2 max-h-72 overflow-y-auto">
-            {integrantes.map((i) => {
-              const est = String(i.estado).toLowerCase();
-              return (
-                <div key={i.id} className="p-3 rounded-lg bg-slate-950 border border-slate-800/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
-                  <span className="font-semibold text-slate-200">{i.nombre}</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCambiarEstado(i.id, 'Pendiente', 0)}
-                      className={`px-2 py-1 rounded text-[10px] font-bold ${est.includes('pendiente') ? 'bg-rose-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-                    >
-                      Pendiente
-                    </button>
-                    <button
-                      onClick={() => {
-                        const monto = prompt('Ingrese el monto abonado (Gs.):', String(i.monto_pagado || 50000));
-                        if (monto !== null) handleCambiarEstado(i.id, 'Parcial', Number(monto));
-                      }}
-                      className={`px-2 py-1 rounded text-[10px] font-bold ${est.includes('parcial') ? 'bg-amber-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-                    >
-                      Parcial
-                    </button>
-                    <button
-                      onClick={() => handleCambiarEstado(i.id, 'Pagado', MONTO_POR_INTEGRANTE)}
-                      className={`px-2 py-1 rounded text-[10px] font-bold ${est.includes('pagado') || i.estado === true ? 'bg-emerald-500 text-white' : 'bg-slate-800 text-slate-400'}`}
-                    >
-                      Pagado
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Formulario de Gastos */}
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-            💸 Registrar Egreso / Gasto
-          </h2>
-          <form onSubmit={handleRegistrarGasto} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Concepto o destino del dinero"
-              value={conceptoGasto}
-              onChange={(e) => setConceptoGasto(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
-            />
-            <input
-              type="number"
-              placeholder="Monto en Gs."
-              value={montoGasto}
-              onChange={(e) => setMontoGasto(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"
-            />
-            <button
-              type="submit"
-              disabled={submittingGasto}
-              className="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all disabled:opacity-50"
-            >
-              {submittingGasto ? 'Guardando...' : 'Confirmar Gasto'}
-            </button>
-          </form>
-        </div>
-
-        {/* Historial de Gastos */}
-        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
-          <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
-            📋 Historial de Gastos Registrados
-          </h2>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {gastos.length === 0 ? (
-              <p className="text-xs text-slate-500 italic text-center py-2">No hay gastos registrados.</p>
-            ) : (
-              gastos.map((g) => (
-                <div key={g.id} className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 flex justify-between items-center text-xs">
-                  <span className="font-semibold text-slate-200">{g.concepto}</span>
-                  <span className="font-mono font-bold text-rose-400">-{formatGs(Number(g.monto))}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
+        <Link href="/" className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl text-slate-300 transition-colors">
+          👁️ Ver sitio público
+        </Link>
       </div>
-    </main>
+
+      {/* CREATE: Formulario para Agregar */}
+      <form onSubmit={handleAgregar} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap gap-3 items-center">
+        <input
+          type="text"
+          placeholder="Nombre Completo"
+          value={nuevoNombre}
+          onChange={(e) => setNuevoNombre(e.target.value)}
+          className="flex-1 min-w-[200px] bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+          required
+        />
+        <select
+          value={nuevoEstado}
+          onChange={(e) => setNuevoEstado(e.target.value)}
+          className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+        >
+          <option value="Pendiente">Pendiente</option>
+          <option value="Pagado">Pagado</option>
+          <option value="Parcial">Parcial</option>
+        </select>
+
+        {nuevoEstado === 'Parcial' && (
+          <input
+            type="number"
+            placeholder="Monto Gs."
+            value={nuevoMonto}
+            onChange={(e) => setNuevoMonto(Number(e.target.value))}
+            className="w-28 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+          />
+        )}
+
+        <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+          + Registrar
+        </button>
+      </form>
+
+      {/* READ, UPDATE, DELETE: Lista Interactiva */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="divide-y divide-slate-800">
+          {integrantes.length === 0 ? (
+            <div className="p-6 text-center text-slate-500 text-sm">
+              No hay integrantes registrados.
+            </div>
+          ) : (
+            integrantes.map((item) => (
+              <div key={item.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                
+                {/* EDICIÓN DE NOMBRE O VISUALIZACIÓN */}
+                <div className="flex-1">
+                  {editandoId === item.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={nombreEdit}
+                        onChange={(e) => setNombreEdit(e.target.value)}
+                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                      />
+                      <button
+                        onClick={() => handleGuardarNombre(item.id)}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1 rounded-lg"
+                      >
+                        Guardar
+                      </button>
+                      <button
+                        onClick={() => setEditandoId(null)}
+                        className="bg-slate-800 text-slate-300 text-xs px-2.5 py-1 rounded-lg"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-slate-100">{item.nombre}</p>
+                      <button
+                        onClick={() => {
+                          setEditandoId(item.id);
+                          setNombreEdit(item.nombre);
+                        }}
+                        className="text-slate-400 hover:text-indigo-400 text-xs"
+                        title="Editar Nombre"
+                      >
+                        ✏️
+                      </button>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Estado: <strong className="text-slate-200">{String(item.estado ?? 'Pendiente')}</strong>
+                    {String(item.estado).toLowerCase().includes('parcial') && 
+                      ` (${new Intl.NumberFormat('es-PY').format(Number(item.monto_pagado) || 0)} Gs.)`}
+                  </p>
+                </div>
+
+                {/* ACCIONES CRUD: ESTADOS Y ELIMINAR */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => handleCambiarEstado(item.id, 'Pagado', item.monto_pagado)}
+                    className="px-2.5 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium hover:bg-emerald-500/30 transition-colors"
+                  >
+                    Pagado
+                  </button>
+                  <button
+                    onClick={() => handleCambiarEstado(item.id, 'Parcial', item.monto_pagado)}
+                    className="px-2.5 py-1.5 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-lg text-xs font-medium hover:bg-sky-500/30 transition-colors"
+                  >
+                    Parcial
+                  </button>
+                  <button
+                    onClick={() => handleCambiarEstado(item.id, 'Pendiente', 0)}
+                    className="px-2.5 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-medium hover:bg-amber-500/30 transition-colors"
+                  >
+                    Pendiente
+                  </button>
+
+                  <button
+                    onClick={() => handleEliminar(item.id, item.nombre)}
+                    className="px-2.5 py-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium hover:bg-rose-500/40 transition-colors ml-1"
+                    title="Eliminar Registro"
+                  >
+                    🗑️
+                  </button>
+                </div>
+
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
