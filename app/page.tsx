@@ -158,13 +158,9 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Tarjeta Destacada: Conteo Regresivo con Efecto */}
-          <div className="w-full bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl p-4 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse-subtle relative overflow-hidden flex flex-col items-center justify-center">
+          {/* Tarjeta Destacada: Conteo de Días Solo */}
+          <div className="w-full bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl py-3.5 px-4 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse-subtle relative overflow-hidden flex items-center justify-center">
             
-            <span className="text-[11px] font-bold tracking-widest text-amber-400/90 uppercase mb-1">
-              ⏳ Cuenta Regresiva
-            </span>
-
             {diasRestantes !== null ? (
               diasRestantes > 0 ? (
                 <div className="flex items-baseline gap-2">
@@ -191,9 +187,6 @@ export default function Home() {
               </span>
             )}
 
-            <div className="mt-2 pt-2 border-t border-amber-500/20 w-full text-[11px] text-amber-200/80 font-medium text-center">
-              🎉 ¡El lugar ya está señado por 500.000 Gs.!
-            </div>
           </div>
 
           {/* Tarjetas de Resumen Financiero */}
