@@ -28,11 +28,15 @@ export default function AdminPage() {
 
   const [nuevoNombre, setNuevoNombre] = useState('');
   const [nuevoEstado, setNuevoEstado] = useState('Pendiente');
-  const [nuevoMonto, setNuevoMonto] = useState<number>(0);
+  const [nuevoMontoFormatted, setNuevoMontoFormatted] = useState('');
 
   // Estados para edicion de integrante
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [nombreEdit, setNombreEdit] = useState('');
+
+  // Estado para Modal/Edición rápida de Pago Parcial
+  const [parcialModalItem, setParcialModalItem] = useState<Integrante | null>(null);
+  const [montoParcialFormatted, setMontoParcialFormatted] = useState('');
 
   // Estados para gastos
   const [conceptoGasto, setConceptoGasto] = useState('');
@@ -40,6 +44,13 @@ export default function AdminPage() {
   const [submittingGasto, setSubmittingGasto] = useState(false);
 
   const MONTO_POR_INTEGRANTE = 100000;
+
+  // FUNCIÓN AUXILIAR PARA DAR FORMATO DE MILES
+  const formatNumberWithDots = (value: string | number) => {
+    const rawValue = String(value).replace(/\D/g, '');
+    if (!rawValue) return '';
+    return new Intl.NumberFormat('es-PY').format(Number(rawValue));
+  };
 
   const fetchIntegrantes = async () => {
     try {
@@ -97,7 +108,9 @@ export default function AdminPage() {
 
     let monto = 0;
     if (nuevoEstado === 'Pagado') monto = 100000;
-    if (nuevoEstado === 'Parcial') monto = nuevoMonto;
+    if (nuevoEstado === 'Parcial') {
+      monto = Number(nuevoMontoFormatted.replace(/\./g, '')) || 0;
+    }
 
     await fetch('/api/integrantes', {
       method: 'POST',
@@ -110,20 +123,15 @@ export default function AdminPage() {
     });
 
     setNuevoNombre('');
-    setNuevoMonto(0);
+    setNuevoMontoFormatted('');
     setNuevoEstado('Pendiente');
     fetchIntegrantes();
   };
 
-  // UPDATE ESTADO
-  const handleCambiarEstado = async (id: number, estado: string, montoActual: number) => {
+  // UPDATE ESTADO (Pagado o Pendiente)
+  const handleCambiarEstado = async (id: number, estado: string) => {
     let monto = 0;
     if (estado === 'Pagado') monto = 100000;
-    if (estado === 'Parcial') {
-      const resp = prompt('Ingrese el monto abonado (Gs.):', String(montoActual || 50000));
-      if (resp === null) return;
-      monto = Number(resp) || 0;
-    }
 
     await fetch('/api/integrantes', {
       method: 'PUT',
@@ -131,6 +139,33 @@ export default function AdminPage() {
       body: JSON.stringify({ id, estado, monto_pagado: monto }),
     });
 
+    fetchIntegrantes();
+  };
+
+  // ABRIR MODAL PARCIAL
+  const handleAbrirModalParcial = (item: Integrante) => {
+    setParcialModalItem(item);
+    const montoInicial = item.monto_pagado || 50000;
+    setMontoParcialFormatted(formatNumberWithDots(montoInicial));
+  };
+
+  // CONFIRMAR PAGO PARCIAL DESDE EL MODAL
+  const handleGuardarParcial = async () => {
+    if (!parcialModalItem) return;
+    const montoNum = Number(montoParcialFormatted.replace(/\./g, '')) || 0;
+
+    await fetch('/api/integrantes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: parcialModalItem.id,
+        estado: 'Parcial',
+        monto_pagado: montoNum,
+      }),
+    });
+
+    setParcialModalItem(null);
+    setMontoParcialFormatted('');
     fetchIntegrantes();
   };
 
@@ -181,15 +216,9 @@ export default function AdminPage() {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
-  // MANEJO DE FORMATO DE MONTO EN TIEMPO REAL
+  // MANEJO DE FORMATO DE MONTO EN TIEMPO REAL PARA GASTOS
   const handleMontoGastoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
-    if (!rawValue) {
-      setMontoGasto('');
-      return;
-    }
-    const formatted = new Intl.NumberFormat('es-PY').format(Number(rawValue));
-    setMontoGasto(formatted);
+    setMontoGasto(formatNumberWithDots(e.target.value));
   };
 
   // REGISTRAR NUEVO GASTO
@@ -340,11 +369,12 @@ export default function AdminPage() {
 
         {nuevoEstado === 'Parcial' && (
           <input
-            type="number"
+            type="text"
             placeholder="Monto Gs."
-            value={nuevoMonto}
-            onChange={(e) => setNuevoMonto(Number(e.target.value))}
-            className="w-28 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+            value={nuevoMontoFormatted}
+            onChange={(e) => setNuevoMontoFormatted(formatNumberWithDots(e.target.value))}
+            className="w-32 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+            required
           />
         )}
 
@@ -416,19 +446,19 @@ export default function AdminPage() {
                 {/* ACCIONES CRUD: ESTADOS Y ELIMINAR */}
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => handleCambiarEstado(item.id, 'Pagado', item.monto_pagado)}
+                    onClick={() => handleCambiarEstado(item.id, 'Pagado')}
                     className="px-2.5 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium hover:bg-emerald-500/30 transition-colors"
                   >
                     Pagado
                   </button>
                   <button
-                    onClick={() => handleCambiarEstado(item.id, 'Parcial', item.monto_pagado)}
+                    onClick={() => handleAbrirModalParcial(item)}
                     className="px-2.5 py-1.5 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-lg text-xs font-medium hover:bg-sky-500/30 transition-colors"
                   >
                     Parcial
                   </button>
                   <button
-                    onClick={() => handleCambiarEstado(item.id, 'Pendiente', 0)}
+                    onClick={() => handleCambiarEstado(item.id, 'Pendiente')}
                     className="px-2.5 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-medium hover:bg-amber-500/30 transition-colors"
                   >
                     Pendiente
@@ -508,6 +538,49 @@ export default function AdminPage() {
           )}
         </div>
       </div>
+
+      {/* MODAL FLOTANTE PARA INGRESAR MONTO PARCIAL CON SEPARADOR DE MILES */}
+      {parcialModalItem && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <h3 className="font-bold text-lg text-slate-100">Registrar Pago Parcial</h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Integrante: <strong className="text-indigo-400">{parcialModalItem.nombre}</strong>
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-medium text-slate-400">Monto Abonado (Gs.)</label>
+              <input
+                type="text"
+                autoFocus
+                value={montoParcialFormatted}
+                onChange={(e) => setMontoParcialFormatted(formatNumberWithDots(e.target.value))}
+                placeholder="Ej: 50.000"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-bold text-emerald-400 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setParcialModalItem(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleGuardarParcial}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-medium transition-colors"
+              >
+                Guardar Pago
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
