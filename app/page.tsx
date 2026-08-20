@@ -23,6 +23,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
 
+  // Estado para el conteo de días
+  const [diasRestantes, setDiasRestantes] = useState<number | null>(null);
+
   const MONTO_POR_INTEGRANTE = 100000;
 
   useEffect(() => {
@@ -42,6 +45,23 @@ export default function Home() {
       }
     }
     fetchData();
+
+    // Lógica para calcular los días faltantes para el 14/11/2026
+    const calcularDias = () => {
+      const fechaObjetivo = new Date(2026, 10, 14); // Mes 10 es Noviembre (0-indexed)
+      const ahora = new Date();
+      
+      // Ajuste de medianoche para cálculo exacto de días
+      fechaObjetivo.setHours(0, 0, 0, 0);
+      const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+      const diferenciaTiempo = fechaObjetivo.getTime() - hoy.getTime();
+      const diferenciaDias = Math.ceil(diferenciaTiempo / (1000 * 3600 * 24));
+
+      setDiasRestantes(diferenciaDias);
+    };
+
+    calcularDias();
   }, []);
 
   let totalMontoPagado = 0;
@@ -68,26 +88,19 @@ export default function Home() {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
-  const textoNovedades = "🎉 ¡El lugar ya está señado por 500.000 Gs.! ------------------ ";
-
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 px-3 py-4 sm:p-6 flex justify-center items-start w-full">
       
       <style>{`
-        @keyframes marquee {
-          0% { transform: translateX(0%); }
-          100% { transform: translateX(-50%); }
+        @keyframes pulse-subtle {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.92; transform: scale(0.99); }
         }
-        .animate-marquee-slow {
-          display: flex;
-          width: max-content;
-          animation: marquee 35s linear infinite;
+        .animate-pulse-subtle {
+          animation: pulse-subtle 3s infinite ease-in-out;
         }
-        .animate-marquee-slow:hover {
-          animation-play-state: paused;
-        }
-        .led-glow {
-          text-shadow: 0 0 8px rgba(251, 191, 36, 0.7), 0 0 15px rgba(245, 158, 11, 0.5);
+        .glow-text {
+          text-shadow: 0 0 12px rgba(245, 158, 11, 0.6), 0 0 24px rgba(217, 119, 6, 0.4);
         }
       `}</style>
 
@@ -137,7 +150,7 @@ export default function Home() {
             </a>
 
             <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-              📅 Sábado 14 de Noviembre
+              📅 Sábado 14 de Noviembre de 2026
             </div>
             
             <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
@@ -145,14 +158,41 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Cartel LED */}
-          <div className="w-full bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/40 border border-amber-500/50 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(245,158,11,0.15)] py-2 relative flex items-center">
-            <div className="overflow-hidden whitespace-nowrap w-full relative">
-              <div className="animate-marquee-slow font-mono text-xs sm:text-sm font-black text-amber-300 tracking-wider led-glow">
-                <span>{textoNovedades}</span>
-                <span>{textoNovedades}</span>
-                <span>{textoNovedades}</span>
-              </div>
+          {/* Tarjeta Destacada: Conteo Regresivo con Efecto */}
+          <div className="w-full bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl p-4 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse-subtle relative overflow-hidden flex flex-col items-center justify-center">
+            
+            <span className="text-[11px] font-bold tracking-widest text-amber-400/90 uppercase mb-1">
+              ⏳ Cuenta Regresiva
+            </span>
+
+            {diasRestantes !== null ? (
+              diasRestantes > 0 ? (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-slate-200 text-base sm:text-lg font-bold">Faltan</span>
+                  <span className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-200 to-amber-400 glow-text tracking-tight">
+                    {diasRestantes}
+                  </span>
+                  <span className="text-slate-200 text-base sm:text-lg font-bold">
+                    {diasRestantes === 1 ? 'día' : 'días'}
+                  </span>
+                </div>
+              ) : diasRestantes === 0 ? (
+                <span className="text-xl sm:text-2xl font-black text-amber-300 glow-text uppercase tracking-wider">
+                  🎉 ¡Hoy es el gran día! 🎉
+                </span>
+              ) : (
+                <span className="text-sm font-semibold text-slate-400">
+                  El evento ya ha concluido
+                </span>
+              )
+            ) : (
+              <span className="text-sm font-medium text-amber-300/70 animate-pulse">
+                Calculando días...
+              </span>
+            )}
+
+            <div className="mt-2 pt-2 border-t border-amber-500/20 w-full text-[11px] text-amber-200/80 font-medium text-center">
+              🎉 ¡El lugar ya está señado por 500.000 Gs.!
             </div>
           </div>
 
