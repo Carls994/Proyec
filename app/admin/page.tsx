@@ -36,7 +36,7 @@ export default function AdminPage() {
 
   // Estados para gastos
   const [conceptoGasto, setConceptoGasto] = useState('');
-  const [montoGasto, setMontoGasto] = useState<number | ''>('');
+  const [montoGasto, setMontoGasto] = useState('');
   const [submittingGasto, setSubmittingGasto] = useState(false);
 
   const MONTO_POR_INTEGRANTE = 100000;
@@ -181,10 +181,21 @@ export default function AdminPage() {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
+  // MANEJO DE FORMATO DE MONTO EN TIEMPO REAL
+  const handleMontoGastoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setMontoGasto('');
+      return;
+    }
+    const formatted = new Intl.NumberFormat('es-PY').format(Number(rawValue));
+    setMontoGasto(formatted);
+  };
+
   // REGISTRAR NUEVO GASTO
   const handleRegistrarGasto = async (e: React.FormEvent) => {
     e.preventDefault();
-    const montoNum = Number(montoGasto);
+    const montoNum = Number(montoGasto.replace(/\./g, ''));
 
     if (!conceptoGasto.trim() || !montoNum || montoNum <= 0) {
       alert('⚠️ Ingrese un concepto válido y un monto mayor a 0 Gs.');
@@ -453,10 +464,10 @@ export default function AdminPage() {
             required
           />
           <input
-            type="number"
+            type="text"
             placeholder="Monto Gs."
             value={montoGasto}
-            onChange={(e) => setMontoGasto(e.target.value === '' ? '' : Number(e.target.value))}
+            onChange={handleMontoGastoChange}
             className="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
             required
           />
