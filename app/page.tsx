@@ -47,9 +47,8 @@ export default function Home() {
     }
     fetchData();
 
-    // Lógica para calcular los días faltantes para el 14/11/2026
     const calcularDias = () => {
-      const fechaObjetivo = new Date(2026, 10, 14); // Mes 10 es Noviembre (0-indexed)
+      const fechaObjetivo = new Date(2026, 10, 14);
       const ahora = new Date();
       
       fechaObjetivo.setHours(0, 0, 0, 0);
@@ -88,7 +87,6 @@ export default function Home() {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
-  // Variantes para animaciones de entrada
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -101,7 +99,14 @@ export default function Home() {
 
   const itemVariants = {
     hidden: { opacity: 0, y: 15 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { 
+        duration: 0.4, 
+        ease: [0, 0, 0.2, 1] as const 
+      } 
+    },
   };
 
   return (
@@ -268,7 +273,7 @@ export default function Home() {
                   className="bg-gradient-to-r from-indigo-500 via-emerald-400 to-emerald-300 h-full rounded-full"
                   initial={{ width: 0 }}
                   animate={{ width: `${porcentajeProgreso}%` }}
-                  transition={{ duration: 1.2, ease: 'easeOut' }}
+                  transition={{ duration: 1.2, ease: [0, 0, 0.2, 1] }}
                 />
               </div>
             </div>
@@ -353,7 +358,6 @@ export default function Home() {
                 </motion.button>
               </div>
 
-              {/* Resumen rápido */}
               <div className="grid grid-cols-2 gap-2 text-center text-xs">
                 <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Ingresos Totales</span>
@@ -365,7 +369,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Historial de Gastos */}
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Egresos Registrados</h4>
                 <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
@@ -382,7 +385,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Total Neto Disponibilidad */}
               <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/50 flex justify-between items-center text-xs">
                 <span className="font-bold text-cyan-300 uppercase">Saldo Neto Disponible:</span>
                 <span className="font-extrabold text-sm text-cyan-200 font-mono">{formatGs(saldoEnCaja)}</span>
