@@ -28,6 +28,7 @@ export default function Home() {
   const [diasRestantes, setDiasRestantes] = useState<number | null>(null);
 
   const MONTO_POR_INTEGRANTE = 100000;
+  const COSTO_ALQUILER_LOCAL = 1000000; // Costo del alquiler del local
 
   useEffect(() => {
     async function fetchData() {
@@ -80,7 +81,8 @@ export default function Home() {
 
   const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
   const saldoEnCaja = totalMontoPagado - totalGastos;
-  const totalMeta = integrantes.length * MONTO_POR_INTEGRANTE;
+  const metaAportes = integrantes.length * MONTO_POR_INTEGRANTE;
+  const totalMeta = metaAportes + COSTO_ALQUILER_LOCAL;
   const porcentajeProgreso = totalMeta > 0 ? Math.round((totalMontoPagado / totalMeta) * 100) : 0;
 
   const formatGs = (amount: number) => {
@@ -217,6 +219,15 @@ export default function Home() {
                 Calculando días...
               </span>
             )}
+          </motion.div>
+
+          {/* Tarjeta Informativa de Alquiler del Local */}
+          <motion.div variants={itemVariants} className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-500/40 flex items-center justify-between px-3.5 text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🏢</span>
+              <span className="font-bold text-purple-300 uppercase tracking-wide">Alquiler del Local:</span>
+            </div>
+            <span className="font-extrabold text-purple-200 font-mono text-sm">{formatGs(COSTO_ALQUILER_LOCAL)}</span>
           </motion.div>
 
           {/* Tarjetas de Resumen Financiero */}
@@ -367,6 +378,12 @@ export default function Home() {
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">Gastos / Compras</span>
                   <span className="text-rose-400 font-extrabold text-sm mt-0.5 block">{formatGs(totalGastos)}</span>
                 </div>
+              </div>
+
+              {/* Detalle de Presupuesto del Local */}
+              <div className="p-2.5 rounded-xl bg-purple-950/20 border border-purple-500/30 flex justify-between items-center text-xs">
+                <span className="text-purple-300 font-bold uppercase">Costo Alquiler Local:</span>
+                <span className="text-purple-200 font-mono font-bold">{formatGs(COSTO_ALQUILER_LOCAL)}</span>
               </div>
 
               <div className="space-y-2">
