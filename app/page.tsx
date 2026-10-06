@@ -42,7 +42,7 @@ export default function Home() {
         setGastos(Array.isArray(dataGastos) ? dataGastos : []);
       } catch (err) {
         console.error('Error cargando datos:', err);
-      } finally {
+      } font-medium {
         setLoading(false);
       }
     }
