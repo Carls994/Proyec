@@ -28,8 +28,8 @@ export default function Home() {
   const [diasRestantes, setDiasRestantes] = useState<number | null>(null);
 
   const MONTO_POR_INTEGRANTE = 100000;
-  const COSTO_ALQUILER_LOCAL = 1000000; // Costo total del alquiler
-  const SENA_LOCAL = 500000; // Monto ya entregado como seña
+  const COSTO_ALQUILER_LOCAL = 1000000;
+  const SENA_LOCAL = 500000;
 
   useEffect(() => {
     async function fetchData() {
@@ -195,7 +195,7 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* Tarjeta Destacada: Conteo de Días */}
+          {/* Conteo de Días */}
           <motion.div variants={itemVariants} className="w-full bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl py-3.5 px-4 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse-subtle relative overflow-hidden flex items-center justify-center">
             {diasRestantes !== null ? (
               diasRestantes > 0 ? (
@@ -224,8 +224,8 @@ export default function Home() {
             )}
           </motion.div>
 
-          {/* TARJETA DESTACADA: ESTADO DEL ALQUILER DEL LOCAL */}
-          <motion.div variants={itemVariants} className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/50 space-y-2 text-xs">
+          {/* BOX PRINCIPAL: ESTADO DEL ALQUILER DEL LOCAL */}
+          <motion.div variants={itemVariants} className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/50 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 font-bold text-purple-300 uppercase tracking-wide">
                 <span>🏢</span>
@@ -235,16 +235,16 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <div className="p-2 rounded-lg bg-emerald-950/50 border border-emerald-500/40 flex flex-col justify-center items-center">
+              <div className="p-2 rounded-lg bg-emerald-950/50 border border-emerald-500/40 flex flex-col justify-center items-center text-center">
                 <span className="text-[10px] text-emerald-300 uppercase font-bold flex items-center gap-1">
-                  ✅ Señado / Pagado
+                  ✅ Ya Señado
                 </span>
                 <span className="font-extrabold text-emerald-200 font-mono text-xs mt-0.5">{formatGs(SENA_LOCAL)}</span>
               </div>
 
-              <div className="p-2 rounded-lg bg-amber-950/50 border border-amber-500/40 flex flex-col justify-center items-center">
+              <div className="p-2 rounded-lg bg-amber-950/50 border border-amber-500/40 flex flex-col justify-center items-center text-center">
                 <span className="text-[10px] text-amber-300 uppercase font-bold flex items-center gap-1">
-                  ⏳ Restante por Pagar
+                  ⏳ Restante a Pagar
                 </span>
                 <span className="font-extrabold text-amber-200 font-mono text-xs mt-0.5">{formatGs(saldoPendienteLocal)}</span>
               </div>
@@ -294,7 +294,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Barra de Progreso Animada */}
+            {/* Barra de Progreso */}
             <div className="col-span-2 p-3 rounded-xl bg-slate-900/90 border border-slate-800">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-xs font-bold text-slate-300 uppercase">Progreso de la Meta</span>
@@ -357,7 +357,7 @@ export default function Home() {
 
       </motion.div>
 
-      {/* MODAL EMERGENTE ANIMADO */}
+      {/* MODAL DE GASTOS LIMPIO */}
       <AnimatePresence>
         {modalAbierto && (
           <motion.div 
@@ -396,60 +396,29 @@ export default function Home() {
                   <span className="text-emerald-400 font-extrabold text-sm mt-0.5 block">{formatGs(totalMontoPagado)}</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Egresos Totales</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Gastos Varios</span>
                   <span className="text-rose-400 font-extrabold text-sm mt-0.5 block">{formatGs(totalGastos)}</span>
                 </div>
               </div>
 
-              {/* Detalle del Alquiler del Local dentro del Modal */}
-              <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-500/40 space-y-1 text-xs">
-                <div className="flex justify-between items-center font-bold text-purple-300">
-                  <span>🏢 Total Alquiler Local:</span>
-                  <span className="font-mono text-purple-200">{formatGs(COSTO_ALQUILER_LOCAL)}</span>
-                </div>
-                <div className="flex justify-between items-center text-[11px] text-emerald-400">
-                  <span>• Seña entregada (50%):</span>
-                  <span className="font-mono font-bold">-{formatGs(SENA_LOCAL)}</span>
-                </div>
-                <div className="flex justify-between items-center text-[11px] text-amber-300 pt-1 border-t border-purple-900/60 font-semibold">
-                  <span>• Saldo restante local:</span>
-                  <span className="font-mono">{formatGs(saldoPendienteLocal)}</span>
-                </div>
-              </div>
-
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Egresos Registrados</h4>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Gastos Registrados</h4>
                 <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
                   {gastos.length === 0 ? (
-                    <p className="text-slate-500 italic text-center py-3">No hay gastos registrados aún.</p>
+                    <p className="text-slate-500 italic text-center py-3">No hay gastos adicionales registrados aún.</p>
                   ) : (
-                    gastos.map((g) => {
-                      const esSenaLocal = Number(g.monto) === SENA_LOCAL || g.concepto.toLowerCase().includes('seña') || g.concepto.toLowerCase().includes('local');
-                      return (
-                        <div 
-                          key={g.id} 
-                          className={`p-2.5 rounded-lg border flex justify-between items-center ${
-                            esSenaLocal 
-                              ? 'bg-purple-950/40 border-purple-500/50' 
-                              : 'bg-slate-950/80 border-slate-800/80'
-                          }`}
-                        >
-                          <div className="flex flex-col">
-                            <span className="text-slate-200 font-medium">{g.concepto}</span>
-                            {esSenaLocal && (
-                              <span className="text-[9px] text-purple-300 font-semibold">Destinado a seña del local</span>
-                            )}
-                          </div>
-                          <span className="text-rose-400 font-mono font-bold">-{formatGs(Number(g.monto))}</span>
-                        </div>
-                      );
-                    })
+                    gastos.map((g) => (
+                      <div key={g.id} className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 flex justify-between items-center">
+                        <span className="text-slate-200 font-medium">{g.concepto}</span>
+                        <span className="text-rose-400 font-mono font-bold">-{formatGs(Number(g.monto))}</span>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>
 
               <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/50 flex justify-between items-center text-xs">
-                <span className="font-bold text-cyan-300 uppercase">Saldo Neto Disponible en Caja:</span>
+                <span className="font-bold text-cyan-300 uppercase">Saldo Neto en Caja:</span>
                 <span className="font-extrabold text-sm text-cyan-200 font-mono">{formatGs(saldoEnCaja)}</span>
               </div>
 
