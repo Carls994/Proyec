@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const MotionLink = motion(Link);
+
 interface Integrante {
   id: number;
   nombre: string;
@@ -141,22 +143,21 @@ export default function Home() {
               Gestión de Integrantes y Aportes
             </span>
             
-            <Link href="/admin">
-              <motion.span 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-block px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer"
-              >
-                🔒 Acceso Admin
-              </motion.span>
-            </Link>
+            <MotionLink 
+              href="/admin"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="inline-block px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer relative z-10"
+            >
+              🔒 Acceso Admin
+            </MotionLink>
           </motion.div>
           
           <motion.h1 variants={itemVariants} className="text-2xl sm:text-3xl font-extrabold text-white text-center">
             Cumpleaños de Ña Tani
           </motion.h1>
 
-          {/* Bloque de datos exacto como el original */}
+          {/* Bloque de datos */}
           <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-center gap-1.5 w-full text-xs">
             <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
               Lugar: <strong className="text-white">CAPRICORNIO</strong>
