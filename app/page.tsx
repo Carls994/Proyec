@@ -225,29 +225,22 @@ export default function Home() {
           </motion.div>
 
           {/* BOX PRINCIPAL: ESTADO DEL ALQUILER DEL LOCAL */}
-          <motion.div variants={itemVariants} className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/50 space-y-2 text-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 font-bold text-purple-300 uppercase tracking-wide">
-                <span>🏢</span>
-                <span>Alquiler del Local (CAPRICORNIO)</span>
-              </div>
-              <span className="font-extrabold text-purple-200 font-mono text-sm">{formatGs(COSTO_ALQUILER_LOCAL)}</span>
+          <motion.div 
+            variants={itemVariants} 
+            className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/50 flex items-center justify-between gap-2 text-xs"
+          >
+            <div className="flex items-center gap-1.5 font-bold text-purple-300 uppercase tracking-tight truncate shrink-0">
+              <span>🏢</span>
+              <span>Alquiler Capricornio</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              <div className="p-2 rounded-lg bg-emerald-950/50 border border-emerald-500/40 flex flex-col justify-center items-center text-center">
-                <span className="text-[10px] text-emerald-300 uppercase font-bold flex items-center gap-1">
-                  ✅ Ya Señado
-                </span>
-                <span className="font-extrabold text-emerald-200 font-mono text-xs mt-0.5">{formatGs(SENA_LOCAL)}</span>
-              </div>
-
-              <div className="p-2 rounded-lg bg-amber-950/50 border border-amber-500/40 flex flex-col justify-center items-center text-center">
-                <span className="text-[10px] text-amber-300 uppercase font-bold flex items-center gap-1">
-                  ⏳ Restante a Pagar
-                </span>
-                <span className="font-extrabold text-amber-200 font-mono text-xs mt-0.5">{formatGs(saldoPendienteLocal)}</span>
-              </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-[10px] uppercase tracking-wider">
+                SEÑADO
+              </span>
+              <span className="font-extrabold text-amber-200 font-mono text-xs whitespace-nowrap">
+                Restante: {formatGs(saldoPendienteLocal)}
+              </span>
             </div>
           </motion.div>
 
