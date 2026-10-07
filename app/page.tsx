@@ -229,7 +229,7 @@ export default function Home() {
           >
             <div className="flex items-center gap-1.5 font-bold text-purple-300 uppercase tracking-tight truncate shrink-0">
               <span>🏢</span>
-              <span>Alquiler Local: {formatGs(COSTO_ALQUILER_LOCAL)}</span>
+              <span>Alquiler del Local: {formatGs(COSTO_ALQUILER_LOCAL)}</span>
             </div>
 
             <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-xs uppercase tracking-wider shrink-0">
