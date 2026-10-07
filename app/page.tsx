@@ -6,9 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const MotionLink = motion(Link);
 
+type CategoriaPersona = 'aportante' | 'invitado' | 'nino';
+
 interface Integrante {
   id: number;
   nombre: string;
+  categoria?: CategoriaPersona; // 'aportante' | 'invitado' | 'nino'
   estado?: string | boolean;
   monto_pagado?: number | string;
 }
@@ -25,6 +28,9 @@ export default function Home() {
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
+  
+  // Pestaña activa en la vista pública
+  const [categoriaActiva, setCategoriaActiva] = useState<CategoriaPersona>('aportante');
 
   // Estado para el conteo de días
   const [diasRestantes, setDiasRestantes] = useState<number | null>(null);
@@ -66,10 +72,19 @@ export default function Home() {
     calcularDias();
   }, []);
 
+  // Filtrar según categoría (si no tiene especificada, asumimos 'aportante')
+  const aportantes = integrantes.filter(i => !i.categoria || i.categoria === 'aportante');
+  const invitados = integrantes.filter(i => i.categoria === 'invitado');
+  const ninos = integrantes.filter(i => i.categoria === 'nino');
+
+  // Conteo total general de confirmados
+  const totalConfirmadosGeneral = integrantes.length;
+
+  // Cálculos financieros basados EXCLUSIVAMENTE en los Aportantes
   let totalMontoPagado = 0;
   let cantidadPagadosCompletos = 0;
 
-  integrantes.forEach((i) => {
+  aportantes.forEach((i) => {
     const est = String(i.estado).toLowerCase();
     const abonado = Number(i.monto_pagado) || 0;
 
@@ -84,21 +99,24 @@ export default function Home() {
   const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
   const saldoEnCaja = totalMontoPagado - totalGastos;
   
-  // Meta calculada únicamente por la suma de aportes de los integrantes
-  const totalMeta = integrantes.length * MONTO_POR_INTEGRANTE;
+  // Meta calculada únicamente por los Aportantes
+  const totalMeta = aportantes.length * MONTO_POR_INTEGRANTE;
   const porcentajeProgreso = totalMeta > 0 ? Math.round((totalMontoPagado / totalMeta) * 100) : 0;
 
   const formatGs = (amount: number) => {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
+  // Lista visible según la pestaña activa
+  const listaVisible = 
+    categoriaActiva === 'aportante' ? aportantes :
+    categoriaActiva === 'invitado' ? invitados : ninos;
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.08,
-      },
+      transition: { staggerChildren: 0.08 },
     },
   };
 
@@ -107,10 +125,7 @@ export default function Home() {
     visible: { 
       opacity: 1, 
       y: 0, 
-      transition: { 
-        duration: 0.4, 
-        ease: [0, 0, 0.2, 1] as const 
-      } 
+      transition: { duration: 0.4, ease: [0, 0, 0.2, 1] as const } 
     },
   };
 
@@ -135,7 +150,6 @@ export default function Home() {
         initial="hidden"
         animate="visible"
       >
-        
         {/* Header */}
         <header className="space-y-3 pb-4 border-b border-slate-800 text-center w-full">
           <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-2 w-full">
@@ -223,7 +237,7 @@ export default function Home() {
             )}
           </motion.div>
 
-          {/* BLOQUE ULTRACOMPACTO DEL ALQUILER DEL LOCAL */}
+          {/* Alquiler de Local */}
           <motion.div 
             variants={itemVariants} 
             className="px-3 py-2 rounded-xl bg-purple-950/30 border border-purple-500/40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-center font-medium"
@@ -255,14 +269,17 @@ export default function Home() {
           {/* Tarjetas de Resumen Financiero */}
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2.5 pt-1 text-center w-full">
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="block text-xs font-bold text-slate-400 uppercase">Integrantes</span>
-              <span className="text-2xl font-black text-white block mt-0.5">{integrantes.length}</span>
+              <span className="block text-xs font-bold text-slate-400 uppercase">Confirmados Totales</span>
+              <span className="text-2xl font-black text-white block mt-0.5">{totalConfirmadosGeneral}</span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">
+                ({aportantes.length} Aport. / {invitados.length} Inv. / {ninos.length} Niños)
+              </span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="block text-xs font-bold text-slate-400 uppercase">Completados</span>
+              <span className="block text-xs font-bold text-slate-400 uppercase">Aportes Pagados</span>
               <span className="text-2xl font-black text-emerald-400 block mt-0.5">
-                {cantidadPagadosCompletos} <span className="text-xs text-slate-400 font-normal">/ {integrantes.length}</span>
+                {cantidadPagadosCompletos} <span className="text-xs text-slate-400 font-normal">/ {aportantes.length}</span>
               </span>
             </div>
 
@@ -276,7 +293,7 @@ export default function Home() {
               <span className="text-sm sm:text-base font-extrabold text-emerald-300 block mt-0.5">{formatGs(totalMontoPagado)}</span>
             </div>
 
-            {/* Tarjeta de Saldo en Caja */}
+            {/* Tarjeta Saldo en Caja */}
             <div className="col-span-2 p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/40 shadow-lg flex items-center justify-between px-4">
               <div className="text-left">
                 <span className="block text-xs font-bold text-cyan-400 uppercase tracking-wider">💵 Total en Caja</span>
@@ -298,7 +315,7 @@ export default function Home() {
             {/* Barra de Progreso */}
             <div className="col-span-2 p-3 rounded-xl bg-slate-900/90 border border-slate-800">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-bold text-slate-300 uppercase">Progreso de la Meta</span>
+                <span className="text-xs font-bold text-slate-300 uppercase">Progreso de Aportes</span>
                 <span className="text-xs font-extrabold text-emerald-400">{porcentajeProgreso}%</span>
               </div>
               <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
@@ -313,46 +330,131 @@ export default function Home() {
           </motion.div>
         </header>
 
-        {/* Lista Pública */}
+        {/* Botones Selector de Sectores */}
+        <motion.div variants={itemVariants} className="grid grid-cols-3 gap-1.5 p-1 rounded-xl bg-slate-900 border border-slate-800">
+          <button
+            onClick={() => setCategoriaActiva('aportante')}
+            className={`py-2 px-1 text-xs font-bold rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 ${
+              categoriaActiva === 'aportante'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <span>💳 Aportantes</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              categoriaActiva === 'aportante' ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-800 text-slate-400'
+            }`}>
+              ({aportantes.length})
+            </span>
+          </button>
+
+          <button
+            onClick={() => setCategoriaActiva('invitado')}
+            className={`py-2 px-1 text-xs font-bold rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 ${
+              categoriaActiva === 'invitado'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <span>👥 Invitados</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              categoriaActiva === 'invitado' ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-800 text-slate-400'
+            }`}>
+              ({invitados.length})
+            </span>
+          </button>
+
+          <button
+            onClick={() => setCategoriaActiva('nino')}
+            className={`py-2 px-1 text-xs font-bold rounded-lg transition-all flex flex-col sm:flex-row items-center justify-center gap-1 ${
+              categoriaActiva === 'nino'
+                ? 'bg-indigo-600 text-white shadow-lg'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <span>🎈 Niños</span>
+            <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+              categoriaActiva === 'nino' ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-800 text-slate-400'
+            }`}>
+              ({ninos.length})
+            </span>
+          </button>
+        </motion.div>
+
+        {/* Lista Pública según Pestaña */}
         <motion.div variants={itemVariants} className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl w-full">
+          <div className="px-3.5 py-2.5 bg-slate-900 border-b border-slate-800 flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <span>
+              {categoriaActiva === 'aportante' && 'Lista de Aportantes'}
+              {categoriaActiva === 'invitado' && 'Lista de Invitados'}
+              {categoriaActiva === 'nino' && 'Lista de Niños'}
+            </span>
+            <span>{listaVisible.length} Persona{listaVisible.length !== 1 ? 's' : ''}</span>
+          </div>
+
           <div className="divide-y divide-slate-800/80">
-            {integrantes.map((item, index) => {
-              const estadoTexto = String(item.estado ?? 'Pendiente');
-              const estLower = estadoTexto.toLowerCase();
-              const abonado = Number(item.monto_pagado) || 0;
+            {listaVisible.length === 0 ? (
+              <p className="text-slate-500 italic text-center py-6 text-xs">
+                No hay personas registradas en esta categoría.
+              </p>
+            ) : (
+              listaVisible.map((item, index) => {
+                if (categoriaActiva === 'aportante') {
+                  const estadoTexto = String(item.estado ?? 'Pendiente');
+                  const estLower = estadoTexto.toLowerCase();
+                  const abonado = Number(item.monto_pagado) || 0;
 
-              let badgeStyle = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
-              let textoMostrar = estadoTexto.toUpperCase();
+                  let badgeStyle = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
+                  let textoMostrar = estadoTexto.toUpperCase();
 
-              if (estLower.includes('pagado')) {
-                badgeStyle = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
-                textoMostrar = 'PAGADO';
-              } else if (estLower.includes('parcial')) {
-                badgeStyle = 'bg-sky-500/10 border-sky-500/30 text-sky-400';
-                textoMostrar = `PARCIAL (${formatGs(abonado)})`;
-              } else if (estLower.includes('pendiente')) {
-                textoMostrar = 'PENDIENTE';
-              }
+                  if (estLower.includes('pagado')) {
+                    badgeStyle = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+                    textoMostrar = 'PAGADO';
+                  } else if (estLower.includes('parcial')) {
+                    badgeStyle = 'bg-sky-500/10 border-sky-500/30 text-sky-400';
+                    textoMostrar = `PARCIAL (${formatGs(abonado)})`;
+                  } else if (estLower.includes('pendiente')) {
+                    textoMostrar = 'PENDIENTE';
+                  }
 
-              return (
-                <motion.div 
-                  key={item.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.3 }}
-                  whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.4)' }}
-                  className="px-3.5 py-3 flex items-center justify-between gap-2 transition-colors"
-                >
-                  <span className="font-medium text-slate-100 text-sm truncate flex-1 min-w-0">{item.nombre}</span>
-                  <span className="font-mono text-xs font-semibold text-slate-400 shrink-0">
-                    {formatGs(MONTO_POR_INTEGRANTE)}
-                  </span>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeStyle} shrink-0 uppercase tracking-wide`}>
-                    {textoMostrar}
-                  </span>
-                </motion.div>
-              );
-            })}
+                  return (
+                    <motion.div 
+                      key={item.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.03, duration: 0.3 }}
+                      whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.4)' }}
+                      className="px-3.5 py-3 flex items-center justify-between gap-2 transition-colors"
+                    >
+                      <span className="font-medium text-slate-100 text-sm truncate flex-1 min-w-0">{item.nombre}</span>
+                      <span className="font-mono text-xs font-semibold text-slate-400 shrink-0">
+                        {formatGs(MONTO_POR_INTEGRANTE)}
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeStyle} shrink-0 uppercase tracking-wide`}>
+                        {textoMostrar}
+                      </span>
+                    </motion.div>
+                  );
+                }
+
+                // Vista simplificada para Invitados y Niños
+                return (
+                  <motion.div 
+                    key={item.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.03, duration: 0.3 }}
+                    whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.4)' }}
+                    className="px-3.5 py-3 flex items-center justify-between gap-2 transition-colors"
+                  >
+                    <span className="font-medium text-slate-100 text-sm truncate flex-1 min-w-0">{item.nombre}</span>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border bg-slate-800 border-slate-700 text-slate-300 shrink-0 uppercase tracking-wide">
+                      {categoriaActiva === 'invitado' ? 'INVITADO' : 'NIÑO'}
+                    </span>
+                  </motion.div>
+                );
+              })
+            )}
           </div>
         </motion.div>
 
