@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 
 interface Integrante {
@@ -30,7 +30,7 @@ export default function AdminPage() {
   const [nuevoEstado, setNuevoEstado] = useState('Pendiente');
   const [nuevoMontoFormatted, setNuevoMontoFormatted] = useState('');
 
-  // Estados para edicion de integrante
+  // Estados para edición de integrante
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [nombreEdit, setNombreEdit] = useState('');
 
@@ -45,11 +45,27 @@ export default function AdminPage() {
 
   const MONTO_POR_INTEGRANTE = 100000;
 
+  // FUNCIÓN AUXILIAR PARA PARSEAR CADENAS A NÚMEROS LIMPIANDO PUNTOS Y CARACTERES NO NUMÉRICOS
+  const parseGuaranies = (val: string): number => {
+    const clean = String(val).replace(/\D/g, '');
+    return clean ? parseInt(clean, 10) : 0;
+  };
+
   // FUNCIÓN AUXILIAR PARA DAR FORMATO DE MILES
   const formatNumberWithDots = (value: string | number) => {
     const rawValue = String(value).replace(/\D/g, '');
     if (!rawValue) return '';
     return new Intl.NumberFormat('es-PY').format(Number(rawValue));
+  };
+
+  const formatGs = (amount: number) => {
+    return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
+  };
+
+  const formatFechaUTC = (fechaStr?: string) => {
+    if (!fechaStr) return '';
+    const date = new Date(fechaStr);
+    return date.toLocaleDateString('es-PY', { timeZone: 'UTC' });
   };
 
   const fetchIntegrantes = async () => {
@@ -107,9 +123,9 @@ export default function AdminPage() {
     if (!nuevoNombre.trim()) return;
 
     let monto = 0;
-    if (nuevoEstado === 'Pagado') monto = 100000;
+    if (nuevoEstado === 'Pagado') monto = MONTO_POR_INTEGRANTE;
     if (nuevoEstado === 'Parcial') {
-      monto = Number(nuevoMontoFormatted.replace(/\./g, '')) || 0;
+      monto = parseGuaranies(nuevoMontoFormatted);
     }
 
     await fetch('/api/integrantes', {
@@ -131,7 +147,7 @@ export default function AdminPage() {
   // UPDATE ESTADO (Pagado o Pendiente)
   const handleCambiarEstado = async (id: number, estado: string) => {
     let monto = 0;
-    if (estado === 'Pagado') monto = 100000;
+    if (estado === 'Pagado') monto = MONTO_POR_INTEGRANTE;
 
     await fetch('/api/integrantes', {
       method: 'PUT',
@@ -152,7 +168,7 @@ export default function AdminPage() {
   // CONFIRMAR PAGO PARCIAL DESDE EL MODAL
   const handleGuardarParcial = async () => {
     if (!parcialModalItem) return;
-    const montoNum = Number(montoParcialFormatted.replace(/\./g, '')) || 0;
+    const montoNum = parseGuaranies(montoParcialFormatted);
 
     await fetch('/api/integrantes', {
       method: 'PUT',
@@ -196,25 +212,28 @@ export default function AdminPage() {
     }
   };
 
-  // CÁLCULOS DE SALDOS Y CAJA
-  let totalRecaudado = 0;
-  integrantes.forEach((i) => {
-    const est = String(i.estado || '').toLowerCase();
-    const abonado = Number(i.monto_pagado) || 0;
+  // CÁLCULOS OPTIMIZADOS CON useMemo
+  const totalRecaudado = useMemo(() => {
+    return integrantes.reduce((acc, i) => {
+      const est = String(i.estado || '').toLowerCase();
+      const abonado = Number(i.monto_pagado) || 0;
 
-    if (est.includes('pagado')) {
-      totalRecaudado += MONTO_POR_INTEGRANTE;
-    } else if (est.includes('parcial')) {
-      totalRecaudado += abonado;
-    }
-  });
+      if (est.includes('pagado')) {
+        return acc + MONTO_POR_INTEGRANTE;
+      } else if (est.includes('parcial')) {
+        return acc + abonado;
+      }
+      return acc;
+    }, 0);
+  }, [integrantes]);
 
-  const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
-  const saldoEnCaja = totalRecaudado - totalGastos;
+  const totalGastos = useMemo(() => {
+    return gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
+  }, [gastos]);
 
-  const formatGs = (amount: number) => {
-    return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
-  };
+  const saldoEnCaja = useMemo(() => {
+    return totalRecaudado - totalGastos;
+  }, [totalRecaudado, totalGastos]);
 
   // MANEJO DE FORMATO DE MONTO EN TIEMPO REAL PARA GASTOS
   const handleMontoGastoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,7 +243,7 @@ export default function AdminPage() {
   // REGISTRAR NUEVO GASTO
   const handleRegistrarGasto = async (e: React.FormEvent) => {
     e.preventDefault();
-    const montoNum = Number(montoGasto.replace(/\./g, ''));
+    const montoNum = parseGuaranies(montoGasto);
 
     if (!conceptoGasto.trim() || !montoNum || montoNum <= 0) {
       alert('⚠️ Ingrese un concepto válido y un monto mayor a 0 Gs.');
@@ -255,7 +274,7 @@ export default function AdminPage() {
     } catch (error) {
       console.error(error);
       alert('Error de conexión al registrar el gasto.');
-    } finally {
+    } fontally {
       setSubmittingGasto(false);
     }
   };
@@ -439,7 +458,7 @@ export default function AdminPage() {
                   <p className="text-xs text-slate-400 mt-0.5">
                     Estado: <strong className="text-slate-200">{String(item.estado ?? 'Pendiente')}</strong>
                     {String(item.estado).toLowerCase().includes('parcial') && 
-                      ` (${new Intl.NumberFormat('es-PY').format(Number(item.monto_pagado) || 0)} Gs.)`}
+                      ` (${formatNumberWithDots(item.monto_pagado || 0)} Gs.)`}
                   </p>
                 </div>
 
@@ -526,7 +545,7 @@ export default function AdminPage() {
                   <span className="font-semibold text-slate-200 block">{g.concepto}</span>
                   {g.fecha && (
                     <span className="text-[10px] text-slate-500">
-                      {new Date(g.fecha).toLocaleDateString('es-PY')}
+                      {formatFechaUTC(g.fecha)}
                     </span>
                   )}
                 </div>
