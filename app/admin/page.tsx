@@ -1,606 +1,439 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Integrante {
   id: number;
   nombre: string;
-  estado: string;
-  monto_pagado: number;
+  estado?: string | boolean;
+  monto_pagado?: number | string;
 }
 
 interface Gasto {
   id: number;
   concepto: string;
-  monto: number;
+  monto: number | string;
   fecha?: string;
 }
 
-export default function AdminPage() {
-  const [autenticado, setAutenticado] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [errorLogin, setErrorLogin] = useState('');
-
+export default function Home() {
   const [integrantes, setIntegrantes] = useState<Integrante[]>([]);
   const [gastos, setGastos] = useState<Gasto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalAbierto, setModalAbierto] = useState(false);
 
-  const [nuevoNombre, setNuevoNombre] = useState('');
-  const [nuevoEstado, setNuevoEstado] = useState('Pendiente');
-  const [nuevoMontoFormatted, setNuevoMontoFormatted] = useState('');
-
-  // Estados para edición de integrante
-  const [editandoId, setEditandoId] = useState<number | null>(null);
-  const [nombreEdit, setNombreEdit] = useState('');
-
-  // Estado para Modal/Edición rápida de Pago Parcial
-  const [parcialModalItem, setParcialModalItem] = useState<Integrante | null>(null);
-  const [montoParcialFormatted, setMontoParcialFormatted] = useState('');
-
-  // Estados para gastos
-  const [conceptoGasto, setConceptoGasto] = useState('');
-  const [montoGasto, setMontoGasto] = useState('');
-  const [submittingGasto, setSubmittingGasto] = useState(false);
+  // Estado para el conteo de días
+  const [diasRestantes, setDiasRestantes] = useState<number | null>(null);
 
   const MONTO_POR_INTEGRANTE = 100000;
+  const COSTO_ALQUILER_LOCAL = 1000000;
 
-  // FUNCIÓN AUXILIAR PARA PARSEAR CADENAS A NÚMEROS LIMPIANDO PUNTOS Y CARACTERES NO NUMÉRICOS
-  const parseGuaranies = (val: string): number => {
-    const clean = String(val).replace(/\D/g, '');
-    return clean ? parseInt(clean, 10) : 0;
-  };
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const resIntegrantes = await fetch('/api/integrantes', { cache: 'no-store' });
+        const dataIntegrantes = await resIntegrantes.json();
+        setIntegrantes(Array.isArray(dataIntegrantes) ? dataIntegrantes : []);
 
-  // FUNCIÓN AUXILIAR PARA DAR FORMATO DE MILES
-  const formatNumberWithDots = (value: string | number) => {
-    const rawValue = String(value).replace(/\D/g, '');
-    if (!rawValue) return '';
-    return new Intl.NumberFormat('es-PY').format(Number(rawValue));
-  };
+        const resGastos = await fetch('/api/gastos', { cache: 'no-store' });
+        const dataGastos = await resGastos.json();
+        setGastos(Array.isArray(dataGastos) ? dataGastos : []);
+      } catch (err) {
+        console.error('Error cargando datos:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+
+    const calcularDias = () => {
+      const fechaObjetivo = new Date(2026, 10, 14);
+      const ahora = new Date();
+      
+      fechaObjetivo.setHours(0, 0, 0, 0);
+      const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+
+      const diferenciaTiempo = fechaObjetivo.getTime() - hoy.getTime();
+      const diferenciaDias = Math.ceil(diferenciaTiempo / (1000 * 3600 * 24));
+
+      setDiasRestantes(diferenciaDias);
+    };
+
+    calcularDias();
+  }, []);
+
+  let totalMontoPagado = 0;
+  let cantidadPagadosCompletos = 0;
+
+  integrantes.forEach((i) => {
+    const est = String(i.estado).toLowerCase();
+    const abonado = Number(i.monto_pagado) || 0;
+
+    if (est.includes('pagado') || i.estado === true) {
+      totalMontoPagado += MONTO_POR_INTEGRANTE;
+      cantidadPagadosCompletos += 1;
+    } else if (est.includes('parcial')) {
+      totalMontoPagado += abonado;
+    }
+  });
+
+  const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
+  const saldoEnCaja = totalMontoPagado - totalGastos;
+  
+  // Meta calculada únicamente por la suma de aportes de los integrantes
+  const totalMeta = integrantes.length * MONTO_POR_INTEGRANTE;
+  const porcentajeProgreso = totalMeta > 0 ? Math.round((totalMontoPagado / totalMeta) * 100) : 0;
 
   const formatGs = (amount: number) => {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
-  const formatFechaUTC = (fechaStr?: string) => {
-    if (!fechaStr) return '';
-    const date = new Date(fechaStr);
-    return date.toLocaleDateString('es-PY', { timeZone: 'UTC' });
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+      },
+    },
   };
 
-  const fetchIntegrantes = async () => {
-    try {
-      const res = await fetch('/api/integrantes');
-      if (res.ok) {
-        const data = await res.json();
-        setIntegrantes(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error('Error al cargar integrantes:', err);
-    }
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { 
+        duration: 0.4, 
+        ease: [0, 0, 0.2, 1] as const 
+      } 
+    },
   };
-
-  const fetchGastos = async () => {
-    try {
-      const res = await fetch('/api/gastos');
-      if (res.ok) {
-        const data = await res.json();
-        setGastos(Array.isArray(data) ? data : []);
-      }
-    } catch (err) {
-      console.error('Error al cargar gastos:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (autenticado) {
-      fetchIntegrantes();
-      fetchGastos();
-    }
-  }, [autenticado]);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorLogin('');
-
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-
-    if (res.ok) {
-      setAutenticado(true);
-    } else {
-      const data = await res.json();
-      setErrorLogin(data.error || 'Credenciales inválidas');
-    }
-  };
-
-  // CREATE INTEGRANTE
-  const handleAgregar = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nuevoNombre.trim()) return;
-
-    let monto = 0;
-    if (nuevoEstado === 'Pagado') monto = MONTO_POR_INTEGRANTE;
-    if (nuevoEstado === 'Parcial') {
-      monto = parseGuaranies(nuevoMontoFormatted);
-    }
-
-    await fetch('/api/integrantes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre: nuevoNombre,
-        estado: nuevoEstado,
-        monto_pagado: monto,
-      }),
-    });
-
-    setNuevoNombre('');
-    setNuevoMontoFormatted('');
-    setNuevoEstado('Pendiente');
-    fetchIntegrantes();
-  };
-
-  // UPDATE ESTADO (Pagado o Pendiente)
-  const handleCambiarEstado = async (id: number, estado: string) => {
-    let monto = 0;
-    if (estado === 'Pagado') monto = MONTO_POR_INTEGRANTE;
-
-    await fetch('/api/integrantes', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, estado, monto_pagado: monto }),
-    });
-
-    fetchIntegrantes();
-  };
-
-  // ABRIR MODAL PARCIAL
-  const handleAbrirModalParcial = (item: Integrante) => {
-    setParcialModalItem(item);
-    const montoInicial = item.monto_pagado || 50000;
-    setMontoParcialFormatted(formatNumberWithDots(montoInicial));
-  };
-
-  // CONFIRMAR PAGO PARCIAL DESDE EL MODAL
-  const handleGuardarParcial = async () => {
-    if (!parcialModalItem) return;
-    const montoNum = parseGuaranies(montoParcialFormatted);
-
-    await fetch('/api/integrantes', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: parcialModalItem.id,
-        estado: 'Parcial',
-        monto_pagado: montoNum,
-      }),
-    });
-
-    setParcialModalItem(null);
-    setMontoParcialFormatted('');
-    fetchIntegrantes();
-  };
-
-  // UPDATE NOMBRE
-  const handleGuardarNombre = async (id: number) => {
-    if (!nombreEdit.trim()) return;
-
-    await fetch('/api/integrantes', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, nombre: nombreEdit }),
-    });
-
-    setEditandoId(null);
-    setNombreEdit('');
-    fetchIntegrantes();
-  };
-
-  // DELETE INTEGRANTE
-  const handleEliminar = async (id: number, nombre: string) => {
-    if (confirm(`¿Estás seguro de que deseas eliminar a "${nombre}"?`)) {
-      await fetch('/api/integrantes', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-      fetchIntegrantes();
-    }
-  };
-
-  // CÁLCULOS OPTIMIZADOS CON useMemo
-  const totalRecaudado = useMemo(() => {
-    return integrantes.reduce((acc, i) => {
-      const est = String(i.estado || '').toLowerCase();
-      const abonado = Number(i.monto_pagado) || 0;
-
-      if (est.includes('pagado')) {
-        return acc + MONTO_POR_INTEGRANTE;
-      } else if (est.includes('parcial')) {
-        return acc + abonado;
-      }
-      return acc;
-    }, 0);
-  }, [integrantes]);
-
-  const totalGastos = useMemo(() => {
-    return gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
-  }, [gastos]);
-
-  const saldoEnCaja = useMemo(() => {
-    return totalRecaudado - totalGastos;
-  }, [totalRecaudado, totalGastos]);
-
-  // MANEJO DE FORMATO DE MONTO EN TIEMPO REAL PARA GASTOS
-  const handleMontoGastoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMontoGasto(formatNumberWithDots(e.target.value));
-  };
-
-  // REGISTRAR NUEVO GASTO
-  const handleRegistrarGasto = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const montoNum = parseGuaranies(montoGasto);
-
-    if (!conceptoGasto.trim() || !montoNum || montoNum <= 0) {
-      alert('⚠️ Ingrese un concepto válido y un monto mayor a 0 Gs.');
-      return;
-    }
-
-    if (montoNum > saldoEnCaja) {
-      alert(`❌ Saldo insuficiente en caja. Disponible actual: ${formatGs(saldoEnCaja)}`);
-      return;
-    }
-
-    setSubmittingGasto(true);
-
-    try {
-      const res = await fetch('/api/gastos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ concepto: conceptoGasto, monto: montoNum }),
-      });
-
-      if (res.ok) {
-        setConceptoGasto('');
-        setMontoGasto('');
-        fetchGastos();
-      } else {
-        alert('Ocurrió un error al guardar el gasto.');
-      }
-    } catch (error) {
-      console.error(error);
-      alert('Error de conexión al registrar el gasto.');
-    } finally {
-      setSubmittingGasto(false);
-    }
-  };
-
-  if (!autenticado) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
-        <form onSubmit={handleLogin} className="bg-slate-900 p-6 rounded-2xl border border-slate-800 w-full max-w-sm space-y-4 shadow-xl">
-          <div className="text-center space-y-1">
-            <h2 className="text-xl font-bold">Acceso Administrador</h2>
-            <p className="text-xs text-slate-400">Ingresa tus credenciales de acceso</p>
-          </div>
-
-          {errorLogin && (
-            <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs text-center">
-              {errorLogin}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Usuario</label>
-              <input
-                type="text"
-                placeholder="Usuario"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-100"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1">Contraseña</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 text-slate-100"
-                required
-              />
-            </div>
-          </div>
-
-          <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-xl text-sm transition-colors">
-            Ingresar
-          </button>
-
-          <div className="text-center pt-2">
-            <Link href="/" className="text-xs text-slate-400 hover:underline">
-              ← Volver a la vista pública
-            </Link>
-          </div>
-        </form>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-8 max-w-4xl mx-auto space-y-6">
-      
-      {/* Header Admin */}
-      <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-        <div>
-          <h1 className="text-2xl font-bold">Panel Admin - Gestión CRUD</h1>
-          <p className="text-xs text-slate-400">Bienvenido, {username}</p>
-        </div>
-        <Link href="/" className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl text-slate-300 transition-colors">
-          👁️ Ver sitio público
-        </Link>
-      </div>
+    <main className="min-h-screen bg-slate-950 text-slate-100 px-3 py-4 sm:p-6 flex justify-center items-start w-full">
+      <style>{`
+        @keyframes pulse-subtle {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.94; transform: scale(0.995); }
+        }
+        .animate-pulse-subtle {
+          animation: pulse-subtle 3s infinite ease-in-out;
+        }
+        .glow-text {
+          text-shadow: 0 0 12px rgba(245, 158, 11, 0.6), 0 0 24px rgba(217, 119, 6, 0.4);
+        }
+      `}</style>
 
-      {/* TARJETAS DE SALDO Y CAJA */}
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg">
-          <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Recaudado</span>
-          <span className="text-sm sm:text-base font-black text-emerald-400 mt-1 block">{formatGs(totalRecaudado)}</span>
-        </div>
+      <motion.div 
+        className="w-full max-w-xl mx-auto space-y-4"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        
+        {/* Header */}
+        <header className="space-y-3 pb-4 border-b border-slate-800 text-center w-full">
+          {/* Fila superior dividida: Badge descriptivo + Botón Admin */}
+          <motion.div variants={itemVariants} className="flex items-center justify-between gap-2 w-full">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-center truncate">
+              Gestión de Integrantes
+            </span>
+            
+            <Link href="/admin">
+              <motion.span 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer shrink-0"
+              >
+                🔒 <span>Acceso Admin</span>
+              </motion.span>
+            </Link>
+          </motion.div>
+          
+          <motion.h1 variants={itemVariants} className="text-2xl sm:text-3xl font-extrabold text-white text-center">
+            Cumpleaños de Ña Tani
+          </motion.h1>
 
-        <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg">
-          <span className="text-[10px] font-bold text-slate-400 uppercase block">Total Gastos</span>
-          <span className="text-sm sm:text-base font-black text-rose-400 mt-1 block">{formatGs(totalGastos)}</span>
-        </div>
+          {/* Bloque de botones y datos dividido */}
+          <motion.div variants={itemVariants} className="flex flex-col gap-2 w-full text-xs">
+            {/* Fila 1 de enlaces/botones */}
+            <div className="flex items-center justify-center gap-2 w-full">
+              <motion.a
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                href="https://www.instagram.com/capricornioeventos_/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 text-pink-300 font-semibold transition-all"
+              >
+                📸 <span>Instagram</span>
+              </motion.a>
 
-        <div className="p-3.5 rounded-2xl bg-cyan-950/40 border border-cyan-500/40 shadow-lg">
-          <span className="text-[10px] font-bold text-cyan-400 uppercase block">Disponible Caja</span>
-          <span className="text-sm sm:text-base font-black text-cyan-200 mt-1 block">{formatGs(saldoEnCaja)}</span>
-        </div>
-      </div>
-
-      {/* CREATE: Formulario para Agregar Integrante */}
-      <form onSubmit={handleAgregar} className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap gap-3 items-center">
-        <input
-          type="text"
-          placeholder="Nombre Completo"
-          value={nuevoNombre}
-          onChange={(e) => setNuevoNombre(e.target.value)}
-          className="flex-1 min-w-[200px] bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-          required
-        />
-        <select
-          value={nuevoEstado}
-          onChange={(e) => setNuevoEstado(e.target.value)}
-          className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-        >
-          <option value="Pendiente">Pendiente</option>
-          <option value="Pagado">Pagado</option>
-          <option value="Parcial">Parcial</option>
-        </select>
-
-        {nuevoEstado === 'Parcial' && (
-          <input
-            type="text"
-            placeholder="Monto Gs."
-            value={nuevoMontoFormatted}
-            onChange={(e) => setNuevoMontoFormatted(formatNumberWithDots(e.target.value))}
-            className="w-32 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-            required
-          />
-        )}
-
-        <button type="submit" className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
-          + Registrar
-        </button>
-      </form>
-
-      {/* READ, UPDATE, DELETE: Lista Interactiva de Integrantes */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-        <div className="p-3 bg-slate-900/90 border-b border-slate-800 font-bold text-xs text-slate-300 uppercase tracking-wider">
-          👥 Listado de Integrantes
-        </div>
-        <div className="divide-y divide-slate-800">
-          {integrantes.length === 0 ? (
-            <div className="p-6 text-center text-slate-500 text-sm">
-              No hay integrantes registrados.
+              <motion.a
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                href="https://maps.app.goo.gl/2bH8DYdhPo2RVx2K8"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-200 font-semibold transition-all"
+              >
+                📍 <span>Ubicación GPS</span>
+              </motion.a>
             </div>
-          ) : (
-            integrantes.map((item) => (
-              <div key={item.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                
-                {/* EDICIÓN DE NOMBRE O VISUALIZACIÓN */}
-                <div className="flex-1">
-                  {editandoId === item.id ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={nombreEdit}
-                        onChange={(e) => setNombreEdit(e.target.value)}
-                        className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-                      />
-                      <button
-                        onClick={() => handleGuardarNombre(item.id)}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1 rounded-lg"
-                      >
-                        Guardar
-                      </button>
-                      <button
-                        onClick={() => setEditandoId(null)}
-                        className="bg-slate-800 text-slate-300 text-xs px-2.5 py-1 rounded-lg"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-slate-100">{item.nombre}</p>
-                      <button
-                        onClick={() => {
-                          setEditandoId(item.id);
-                          setNombreEdit(item.nombre);
-                        }}
-                        className="text-slate-400 hover:text-indigo-400 text-xs"
-                        title="Editar Nombre"
-                      >
-                        ✏️
-                      </button>
-                    </div>
-                  )}
 
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Estado: <strong className="text-slate-200">{String(item.estado ?? 'Pendiente')}</strong>
-                    {String(item.estado).toLowerCase().includes('parcial') && 
-                      ` (${formatNumberWithDots(item.monto_pagado || 0)} Gs.)`}
-                  </p>
-                </div>
-
-                {/* ACCIONES CRUD: ESTADOS Y ELIMINAR */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => handleCambiarEstado(item.id, 'Pagado')}
-                    className="px-2.5 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium hover:bg-emerald-500/30 transition-colors"
-                  >
-                    Pagado
-                  </button>
-                  <button
-                    onClick={() => handleAbrirModalParcial(item)}
-                    className="px-2.5 py-1.5 bg-sky-500/20 text-sky-300 border border-sky-500/30 rounded-lg text-xs font-medium hover:bg-sky-500/30 transition-colors"
-                  >
-                    Parcial
-                  </button>
-                  <button
-                    onClick={() => handleCambiarEstado(item.id, 'Pendiente')}
-                    className="px-2.5 py-1.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-lg text-xs font-medium hover:bg-amber-500/30 transition-colors"
-                  >
-                    Pendiente
-                  </button>
-
-                  <button
-                    onClick={() => handleEliminar(item.id, item.nombre)}
-                    className="px-2.5 py-1.5 bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium hover:bg-rose-500/40 transition-colors ml-1"
-                    title="Eliminar Registro"
-                  >
-                    🗑️
-                  </button>
-                </div>
-
+            {/* Fila 2 de información detallada */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 w-full">
+              <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
+                Lugar: <strong className="text-white">CAPRICORNIO</strong>
               </div>
-            ))
-          )}
-        </div>
-      </div>
 
-      {/* FORMULARIO DE REGISTRO DE GASTOS */}
-      <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-3 shadow-xl">
-        <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-          💸 Registrar Egreso / Gasto de Caja
-        </h2>
-        <form onSubmit={handleRegistrarGasto} className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Concepto o destino del dinero (ej: Alquiler)"
-            value={conceptoGasto}
-            onChange={(e) => setConceptoGasto(e.target.value)}
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-            required
-          />
-          <input
-            type="text"
-            placeholder="Monto Gs."
-            value={montoGasto}
-            onChange={handleMontoGastoChange}
-            className="w-full sm:w-36 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-            required
-          />
-          <button
-            type="submit"
-            disabled={submittingGasto}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-          >
-            {submittingGasto ? 'Guardando...' : 'Confirmar Gasto'}
-          </button>
-        </form>
-      </div>
+              <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
+                📅 Sábado 14 de Noviembre de 2026
+              </div>
+              
+              <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
+                ⏰ A partir de las 09:00 hs
+              </div>
+            </div>
+          </motion.div>
 
-      {/* HISTORIAL DE GASTOS REGISTRADOS */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-xl">
-        <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
-          📋 Historial de Gastos Registrados
-        </h2>
-        <div className="space-y-2 max-h-48 overflow-y-auto">
-          {gastos.length === 0 ? (
-            <p className="text-xs text-slate-500 italic text-center py-2">No hay gastos registrados aún.</p>
-          ) : (
-            gastos.map((g) => (
-              <div key={g.id} className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center text-xs">
-                <div>
-                  <span className="font-semibold text-slate-200 block">{g.concepto}</span>
-                  {g.fecha && (
-                    <span className="text-[10px] text-slate-500">
-                      {formatFechaUTC(g.fecha)}
-                    </span>
-                  )}
+          {/* Conteo de Días */}
+          <motion.div variants={itemVariants} className="w-full bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl py-3 px-4 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse-subtle relative overflow-hidden flex items-center justify-center">
+            {diasRestantes !== null ? (
+              diasRestantes > 0 ? (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-slate-200 text-base sm:text-lg font-bold">Faltan</span>
+                  <span className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-200 to-amber-400 glow-text tracking-tight">
+                    {diasRestantes}
+                  </span>
+                  <span className="text-slate-200 text-base sm:text-lg font-bold">
+                    {diasRestantes === 1 ? 'día' : 'días'}
+                  </span>
                 </div>
-                <span className="font-mono font-bold text-rose-400 text-sm">
-                  -{formatGs(Number(g.monto))}
+              ) : diasRestantes === 0 ? (
+                <span className="text-xl sm:text-2xl font-black text-amber-300 glow-text uppercase tracking-wider">
+                  🎉 ¡Hoy es el gran día! 🎉
                 </span>
+              ) : (
+                <span className="text-sm font-semibold text-slate-400">
+                  El evento ya ha concluido
+                </span>
+              )
+            ) : (
+              <span className="text-sm font-medium text-amber-300/70 animate-pulse">
+                Calculando días...
+              </span>
+            )}
+          </motion.div>
+
+          {/* BLOQUE ULTRACOMPACTO DEL ALQUILER DEL LOCAL */}
+          <motion.div 
+            variants={itemVariants} 
+            className="px-3 py-2 rounded-xl bg-purple-950/30 border border-purple-500/40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-center font-medium"
+          >
+            <div className="flex items-center gap-1.5 text-purple-200 font-extrabold uppercase tracking-wide">
+              <span>🏢</span>
+              <span>Capricornio</span>
+            </div>
+            
+            <span className="text-purple-400/40 hidden sm:inline">•</span>
+
+            <span className="text-slate-300 whitespace-nowrap">
+              Costo: <strong className="text-white font-bold">{formatGs(COSTO_ALQUILER_LOCAL)}</strong>
+            </span>
+
+            <span className="text-purple-400/40">•</span>
+
+            <span className="text-slate-300 whitespace-nowrap">
+              Seña: <strong className="text-emerald-300 font-bold">500.000 Gs.</strong>
+            </span>
+
+            <span className="text-purple-400/40">•</span>
+
+            <span className="text-slate-300 whitespace-nowrap">
+              Saldo: <strong className="text-amber-300 font-bold">500.000 Gs.</strong>
+            </span>
+          </motion.div>
+
+          {/* Tarjetas de Resumen Financiero */}
+          <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2.5 pt-1 text-center w-full">
+            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
+              <span className="block text-xs font-bold text-slate-400 uppercase">Integrantes</span>
+              <span className="text-2xl font-black text-white block mt-0.5">{integrantes.length}</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
+              <span className="block text-xs font-bold text-slate-400 uppercase">Completados</span>
+              <span className="text-2xl font-black text-emerald-400 block mt-0.5">
+                {cantidadPagadosCompletos} <span className="text-xs text-slate-400 font-normal">/ {integrantes.length}</span>
+              </span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-900/90 border border-indigo-500/30">
+              <span className="block text-xs font-bold text-indigo-400 uppercase">Meta Total</span>
+              <span className="text-sm sm:text-base font-extrabold text-indigo-200 block mt-0.5">{formatGs(totalMeta)}</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-500/40">
+              <span className="block text-xs font-bold text-emerald-400 uppercase">Recaudado</span>
+              <span className="text-sm sm:text-base font-extrabold text-emerald-300 block mt-0.5">{formatGs(totalMontoPagado)}</span>
+            </div>
+
+            {/* Tarjeta de Saldo en Caja */}
+            <div className="col-span-2 p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/40 shadow-lg flex items-center justify-between px-4">
+              <div className="text-left">
+                <span className="block text-xs font-bold text-cyan-400 uppercase tracking-wider">💵 Total en Caja</span>
+                <span className="text-[10px] text-slate-400 block">Efectivo / Cuenta disponible</span>
               </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* MODAL FLOTANTE PARA INGRESAR MONTO PARCIAL CON SEPARADOR DE MILES */}
-      {parcialModalItem && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div>
-              <h3 className="font-bold text-lg text-slate-100">Registrar Pago Parcial</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Integrante: <strong className="text-indigo-400">{parcialModalItem.nombre}</strong>
-              </p>
+              <div className="flex items-center gap-2.5">
+                <span className="text-lg sm:text-xl font-black text-cyan-200">{formatGs(saldoEnCaja)}</span>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setModalAbierto(true)}
+                  className="px-2.5 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/40 border border-cyan-400/50 text-cyan-200 text-xs font-bold transition-all"
+                >
+                  🔍 Ver Detalles
+                </motion.button>
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-400">Monto Abonado (Gs.)</label>
-              <input
-                type="text"
-                autoFocus
-                value={montoParcialFormatted}
-                onChange={(e) => setMontoParcialFormatted(formatNumberWithDots(e.target.value))}
-                placeholder="Ej: 50.000"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-base font-bold text-emerald-400 focus:outline-none focus:border-indigo-500"
-              />
+            {/* Barra de Progreso */}
+            <div className="col-span-2 p-3 rounded-xl bg-slate-900/90 border border-slate-800">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-bold text-slate-300 uppercase">Progreso de la Meta</span>
+                <span className="text-xs font-extrabold text-emerald-400">{porcentajeProgreso}%</span>
+              </div>
+              <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                <motion.div 
+                  className="bg-gradient-to-r from-indigo-500 via-emerald-400 to-emerald-300 h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${porcentajeProgreso}%` }}
+                  transition={{ duration: 1.2, ease: [0, 0, 0.2, 1] }}
+                />
+              </div>
             </div>
+          </motion.div>
+        </header>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setParcialModalItem(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleGuardarParcial}
-                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-medium transition-colors"
-              >
-                Guardar Pago
-              </button>
-            </div>
+        {/* Lista Pública */}
+        <motion.div variants={itemVariants} className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden shadow-xl w-full">
+          <div className="divide-y divide-slate-800/80">
+            {integrantes.map((item, index) => {
+              const estadoTexto = String(item.estado ?? 'Pendiente');
+              const estLower = estadoTexto.toLowerCase();
+              const abonado = Number(item.monto_pagado) || 0;
+
+              let badgeStyle = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
+              let textoMostrar = estadoTexto.toUpperCase();
+
+              if (estLower.includes('pagado')) {
+                badgeStyle = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400';
+                textoMostrar = 'PAGADO';
+              } else if (estLower.includes('parcial')) {
+                badgeStyle = 'bg-sky-500/10 border-sky-500/30 text-sky-400';
+                textoMostrar = `PARCIAL (${formatGs(abonado)})`;
+              } else if (estLower.includes('pendiente')) {
+                textoMostrar = 'PENDIENTE';
+              }
+
+              return (
+                <motion.div 
+                  key={item.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03, duration: 0.3 }}
+                  whileHover={{ backgroundColor: 'rgba(30, 41, 59, 0.4)' }}
+                  className="px-3.5 py-3 flex items-center justify-between gap-2 transition-colors"
+                >
+                  <span className="font-medium text-slate-100 text-sm truncate flex-1 min-w-0">{item.nombre}</span>
+                  <span className="font-mono text-xs font-semibold text-slate-400 shrink-0">
+                    {formatGs(MONTO_POR_INTEGRANTE)}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${badgeStyle} shrink-0 uppercase tracking-wide`}>
+                    {textoMostrar}
+                  </span>
+                </motion.div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        </motion.div>
 
-    </div>
+      </motion.div>
+
+      {/* MODAL DE GASTOS LIMPIO */}
+      <AnimatePresence>
+        {modalAbierto && (
+          <motion.div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setModalAbierto(false)}
+          >
+            <motion.div 
+              className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-4 relative text-left"
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 className="text-base font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                  📊 Movimientos de Caja
+                </h3>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setModalAbierto(false)}
+                  className="text-slate-400 hover:text-white text-lg font-bold p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  aria-label="Cerrar modal"
+                >
+                  ✕
+                </motion.button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Ingresos Totales</span>
+                  <span className="text-emerald-400 font-extrabold text-sm mt-0.5 block">{formatGs(totalMontoPagado)}</span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Gastos Varios</span>
+                  <span className="text-rose-400 font-extrabold text-sm mt-0.5 block">{formatGs(totalGastos)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Gastos Registrados</h4>
+                <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1 text-xs">
+                  {gastos.length === 0 ? (
+                    <p className="text-slate-500 italic text-center py-3">No hay gastos adicionales registrados aún.</p>
+                  ) : (
+                    gastos.map((g) => (
+                      <div key={g.id} className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 flex justify-between items-center">
+                        <span className="text-slate-200 font-medium">{g.concepto}</span>
+                        <span className="text-rose-400 font-mono font-bold">-{formatGs(Number(g.monto))}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-cyan-950/40 border border-cyan-500/50 flex justify-between items-center text-xs">
+                <span className="font-bold text-cyan-300 uppercase">Saldo Neto en Caja:</span>
+                <span className="font-extrabold text-sm text-cyan-200 font-mono">{formatGs(saldoEnCaja)}</span>
+              </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+    </main>
   );
 }
