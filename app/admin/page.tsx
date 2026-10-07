@@ -274,7 +274,7 @@ export default function AdminPage() {
     } catch (error) {
       console.error(error);
       alert('Error de conexión al registrar el gasto.');
-    } fontally {
+    } finally {
       setSubmittingGasto(false);
     }
   };
