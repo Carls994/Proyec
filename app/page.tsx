@@ -128,14 +128,14 @@ export default function Home() {
       `}</style>
 
       <motion.div 
-        className="w-full max-w-xl mx-auto space-y-5"
+        className="w-full max-w-xl mx-auto space-y-4"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
         
         {/* Header */}
-        <header className="space-y-4 pb-5 border-b border-slate-800 text-center w-full">
+        <header className="space-y-3 pb-4 border-b border-slate-800 text-center w-full">
           <motion.div variants={itemVariants} className="flex flex-col items-center justify-center gap-2 w-full">
             <span className="px-3.5 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold uppercase tracking-wider text-center">
               Gestión de Integrantes y Aportes
@@ -194,7 +194,7 @@ export default function Home() {
           </motion.div>
 
           {/* Conteo de Días */}
-          <motion.div variants={itemVariants} className="w-full bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl py-3.5 px-4 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse-subtle relative overflow-hidden flex items-center justify-center">
+          <motion.div variants={itemVariants} className="w-full bg-gradient-to-r from-amber-950/40 via-amber-900/30 to-amber-950/40 border-2 border-amber-500/60 rounded-2xl py-3 px-4 shadow-[0_0_25px_rgba(245,158,11,0.2)] animate-pulse-subtle relative overflow-hidden flex items-center justify-center">
             {diasRestantes !== null ? (
               diasRestantes > 0 ? (
                 <div className="flex items-baseline gap-2">
@@ -222,38 +222,33 @@ export default function Home() {
             )}
           </motion.div>
 
-          {/* BOX PRINCIPAL: DESGLOSE CLARO Y ORDENADO DEL ALQUILER DEL LOCAL */}
+          {/* BLOQUE ULTRACOM PACTO DEL ALQUILER DEL LOCAL */}
           <motion.div 
             variants={itemVariants} 
-            className="p-4 rounded-xl bg-purple-950/40 border border-purple-500/50 flex flex-col items-center justify-center text-center space-y-3"
+            className="px-3 py-2 rounded-xl bg-purple-950/30 border border-purple-500/40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-center font-medium"
           >
-            <div className="flex items-center gap-2 text-base font-extrabold text-purple-200 uppercase tracking-wide">
-              <span className="text-lg">🏢</span>
-              <span>Alquiler Capricornio</span>
+            <div className="flex items-center gap-1.5 text-purple-200 font-extrabold uppercase tracking-wide">
+              <span>🏢</span>
+              <span>Capricornio</span>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full font-semibold">
-              <div className="p-2.5 rounded-lg bg-purple-900/30 border border-purple-500/20 flex flex-col items-center justify-center">
-                <span className="text-[10px] sm:text-[11px] text-purple-300 uppercase font-bold tracking-wider">Costo Total</span>
-                <strong className="text-white font-extrabold text-sm sm:text-base whitespace-nowrap mt-0.5">
-                  {formatGs(COSTO_ALQUILER_LOCAL)}
-                </strong>
-              </div>
+            <span className="text-purple-400/40 hidden sm:inline">•</span>
 
-              <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex flex-col items-center justify-center">
-                <span className="text-[10px] sm:text-[11px] text-emerald-400 uppercase font-bold tracking-wider">Seña</span>
-                <strong className="text-emerald-300 font-extrabold text-sm sm:text-base whitespace-nowrap mt-0.5">
-                  500.000 Gs.
-                </strong>
-              </div>
+            <span className="text-slate-300 whitespace-nowrap">
+              Costo: <strong className="text-white font-bold">{formatGs(COSTO_ALQUILER_LOCAL)}</strong>
+            </span>
 
-              <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/30 flex flex-col items-center justify-center">
-                <span className="text-[10px] sm:text-[11px] text-amber-400 uppercase font-bold tracking-wider">Saldo</span>
-                <strong className="text-amber-300 font-extrabold text-sm sm:text-base whitespace-nowrap mt-0.5">
-                  500.000 Gs.
-                </strong>
-              </div>
-            </div>
+            <span className="text-purple-400/40">•</span>
+
+            <span className="text-slate-300 whitespace-nowrap">
+              Seña: <strong className="text-emerald-300 font-bold">500.000 Gs.</strong>
+            </span>
+
+            <span className="text-purple-400/40">•</span>
+
+            <span className="text-slate-300 whitespace-nowrap">
+              Saldo: <strong className="text-amber-300 font-bold">500.000 Gs.</strong>
+            </span>
           </motion.div>
 
           {/* Tarjetas de Resumen Financiero */}
