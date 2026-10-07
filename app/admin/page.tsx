@@ -136,40 +136,38 @@ export default function Home() {
         
         {/* Header */}
         <header className="space-y-3 pb-4 border-b border-slate-800 text-center w-full">
-          {/* Fila superior dividida: Badge descriptivo + Botón Admin */}
-          <motion.div variants={itemVariants} className="flex items-center justify-between gap-2 w-full">
-            <span className="px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-center truncate">
-              Gestión de Integrantes
-            </span>
-            
-            <Link href="/admin">
-              <motion.span 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer shrink-0"
-              >
-                🔒 <span>Acceso Admin</span>
-              </motion.span>
-            </Link>
-          </motion.div>
           
-          <motion.h1 variants={itemVariants} className="text-2xl sm:text-3xl font-extrabold text-white text-center">
-            Cumpleaños de Ña Tani
-          </motion.h1>
+          {/* Bloque superior con botones divididos en 2 filas limpias */}
+          <motion.div variants={itemVariants} className="flex flex-col items-center gap-2 w-full">
+            
+            {/* Fila superior: Badge descriptivo + Acceso Admin */}
+            <div className="flex items-center justify-between gap-2 w-full">
+              <span className="px-3.5 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold uppercase tracking-wider truncate">
+                Gestión de Integrantes y Aportes
+              </span>
+              
+              <Link href="/admin">
+                <motion.span 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors cursor-pointer shrink-0"
+                >
+                  🔒 <span>Acceso Admin</span>
+                </motion.span>
+              </Link>
+            </div>
 
-          {/* Bloque de botones y datos dividido */}
-          <motion.div variants={itemVariants} className="flex flex-col gap-2 w-full text-xs">
-            {/* Fila 1 de enlaces/botones */}
-            <div className="flex items-center justify-center gap-2 w-full">
+            {/* Fila inferior: Botones de Instagram y Ubicación GPS */}
+            <div className="flex items-center justify-center gap-2 w-full pt-1">
               <motion.a
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 href="https://www.instagram.com/capricornioeventos_/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 text-pink-300 font-semibold transition-all"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/40 text-pink-300 text-xs font-semibold transition-all"
               >
-                📸 <span>Instagram</span>
+                📸 <span>Ver Instagram</span>
               </motion.a>
 
               <motion.a
@@ -178,25 +176,30 @@ export default function Home() {
                 href="https://maps.app.goo.gl/2bH8DYdhPo2RVx2K8"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-200 font-semibold transition-all"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/40 border border-indigo-500/50 text-indigo-200 text-xs font-semibold transition-all"
               >
-                📍 <span>Ubicación GPS</span>
+                📍 <span>Ver ubicación</span>
               </motion.a>
             </div>
 
-            {/* Fila 2 de información detallada */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5 w-full">
-              <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-                Lugar: <strong className="text-white">CAPRICORNIO</strong>
-              </div>
+          </motion.div>
+          
+          <motion.h1 variants={itemVariants} className="text-2xl sm:text-3xl font-extrabold text-white text-center pt-1">
+            Cumpleaños de Ña Tani
+          </motion.h1>
 
-              <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-                📅 Sábado 14 de Noviembre de 2026
-              </div>
-              
-              <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
-                ⏰ A partir de las 09:00 hs
-              </div>
+          {/* Bloque de información complementaria */}
+          <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-center gap-1.5 w-full text-xs">
+            <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
+              Lugar: <strong className="text-white">CAPRICORNIO</strong>
+            </div>
+
+            <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
+              📅 Sábado 14 de Noviembre de 2026
+            </div>
+            
+            <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
+              ⏰ A partir de las 09:00 hs
             </div>
           </motion.div>
 
@@ -364,7 +367,7 @@ export default function Home() {
 
       </motion.div>
 
-      {/* MODAL DE GASTOS LIMPIO */}
+      {/* MODAL DE GASTOS */}
       <AnimatePresence>
         {modalAbierto && (
           <motion.div 
