@@ -222,22 +222,37 @@ export default function Home() {
             )}
           </motion.div>
 
-          {/* BOX PRINCIPAL: DESGLOSE CLARO DEL ALQUILER DEL LOCAL */}
+          {/* BOX PRINCIPAL: DESGLOSE CLARO Y ORDENADO DEL ALQUILER DEL LOCAL */}
           <motion.div 
             variants={itemVariants} 
-            className="p-4 rounded-xl bg-purple-950/40 border border-purple-500/50 flex flex-col items-center justify-center text-center space-y-1.5"
+            className="p-4 rounded-xl bg-purple-950/40 border border-purple-500/50 flex flex-col items-center justify-center text-center space-y-3"
           >
             <div className="flex items-center gap-2 text-base font-extrabold text-purple-200 uppercase tracking-wide">
               <span className="text-lg">🏢</span>
               <span>Alquiler Capricornio</span>
             </div>
             
-            <div className="text-sm sm:text-base font-semibold text-slate-200">
-              Costo Total: <strong className="text-white font-extrabold">{formatGs(COSTO_ALQUILER_LOCAL)}</strong> 
-              <span className="text-purple-300/60 mx-1.5">•</span> 
-              Seña: <strong className="text-emerald-300 font-extrabold">500.000 Gs.</strong> 
-              <span className="text-purple-300/60 mx-1.5">•</span> 
-              Saldo: <strong className="text-amber-300 font-extrabold">500.000 Gs.</strong>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full font-semibold">
+              <div className="p-2.5 rounded-lg bg-purple-900/30 border border-purple-500/20 flex flex-col items-center justify-center">
+                <span className="text-[10px] sm:text-[11px] text-purple-300 uppercase font-bold tracking-wider">Costo Total</span>
+                <strong className="text-white font-extrabold text-sm sm:text-base whitespace-nowrap mt-0.5">
+                  {formatGs(COSTO_ALQUILER_LOCAL)}
+                </strong>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 flex flex-col items-center justify-center">
+                <span className="text-[10px] sm:text-[11px] text-emerald-400 uppercase font-bold tracking-wider">Seña</span>
+                <strong className="text-emerald-300 font-extrabold text-sm sm:text-base whitespace-nowrap mt-0.5">
+                  500.000 Gs.
+                </strong>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/30 flex flex-col items-center justify-center">
+                <span className="text-[10px] sm:text-[11px] text-amber-400 uppercase font-bold tracking-wider">Saldo</span>
+                <strong className="text-amber-300 font-extrabold text-sm sm:text-base whitespace-nowrap mt-0.5">
+                  500.000 Gs.
+                </strong>
+              </div>
             </div>
           </motion.div>
 
