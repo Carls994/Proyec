@@ -11,7 +11,7 @@ type CategoriaPersona = 'aportante' | 'invitado' | 'nino';
 interface Integrante {
   id: number;
   nombre: string;
-  categoria?: CategoriaPersona; // 'aportante' | 'invitado' | 'nino'
+  categoria?: CategoriaPersona;
   estado?: string | boolean;
   monto_pagado?: number | string;
 }
@@ -72,17 +72,17 @@ export default function Home() {
     calcularDias();
   }, []);
 
-  // Filtrar según categoría (si no tiene especificada, asumimos 'aportante')
+  // Filtrar grupos por categoría (por defecto 'aportante')
   const aportantes = integrantes.filter(i => !i.categoria || i.categoria === 'aportante');
   const invitados = integrantes.filter(i => i.categoria === 'invitado');
   const ninos = integrantes.filter(i => i.categoria === 'nino');
 
-  // Conteo total general de confirmados
-  const totalConfirmadosGeneral = integrantes.length;
+  // Conteo TOTAL de personas confirmadas para el evento (Aportantes + Invitados + Niños)
+  const totalAsistentesEvento = integrantes.length;
 
-  // Cálculos financieros basados EXCLUSIVAMENTE en los Aportantes
+  // Cálculos financieros EXCLUSIVOS de Aportantes
   let totalMontoPagado = 0;
-  let cantidadPagadosCompletos = 0;
+  let cantidadAportantesPagados = 0;
 
   aportantes.forEach((i) => {
     const est = String(i.estado).toLowerCase();
@@ -90,7 +90,7 @@ export default function Home() {
 
     if (est.includes('pagado') || i.estado === true) {
       totalMontoPagado += MONTO_POR_INTEGRANTE;
-      cantidadPagadosCompletos += 1;
+      cantidadAportantesPagados += 1;
     } else if (est.includes('parcial')) {
       totalMontoPagado += abonado;
     }
@@ -99,7 +99,7 @@ export default function Home() {
   const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
   const saldoEnCaja = totalMontoPagado - totalGastos;
   
-  // Meta calculada únicamente por los Aportantes
+  // Meta basada únicamente en los Aportantes
   const totalMeta = aportantes.length * MONTO_POR_INTEGRANTE;
   const porcentajeProgreso = totalMeta > 0 ? Math.round((totalMontoPagado / totalMeta) * 100) : 0;
 
@@ -107,7 +107,7 @@ export default function Home() {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
   };
 
-  // Lista visible según la pestaña activa
+  // Lista según el botón seleccionado
   const listaVisible = 
     categoriaActiva === 'aportante' ? aportantes :
     categoriaActiva === 'invitado' ? invitados : ninos;
@@ -171,7 +171,7 @@ export default function Home() {
             Cumpleaños de Ña Tani
           </motion.h1>
 
-          {/* Bloque de datos */}
+          {/* Datos Generales */}
           <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-center gap-1.5 w-full text-xs">
             <div className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-200">
               Lugar: <strong className="text-white">CAPRICORNIO</strong>
@@ -237,7 +237,7 @@ export default function Home() {
             )}
           </motion.div>
 
-          {/* Alquiler de Local */}
+          {/* Bloque Alquiler Local */}
           <motion.div 
             variants={itemVariants} 
             className="px-3 py-2 rounded-xl bg-purple-950/30 border border-purple-500/40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-center font-medium"
@@ -266,25 +266,47 @@ export default function Home() {
             </span>
           </motion.div>
 
-          {/* Tarjetas de Resumen Financiero */}
+          {/* BLOQUE PRINCIPAL: Personas Confirmadas para el Evento */}
+          <motion.div variants={itemVariants} className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/50 via-slate-900 to-indigo-950/50 border border-indigo-500/40 text-center shadow-lg">
+            <span className="block text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              🎉 Total Personas Confirmadas para el Evento
+            </span>
+            <span className="text-3xl sm:text-4xl font-black text-white block mt-1">
+              {totalAsistentesEvento} <span className="text-sm font-medium text-slate-400">Asistentes</span>
+            </span>
+            <div className="flex items-center justify-center gap-2 mt-2 text-xs text-slate-300 font-medium">
+              <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30">
+                💳 {aportantes.length} Aportantes
+              </span>
+              <span>+</span>
+              <span className="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/30">
+                👥 {invitados.length} Invitados
+              </span>
+              <span>+</span>
+              <span className="px-2 py-0.5 rounded-md bg-pink-500/20 border border-pink-500/30">
+                🎈 {ninos.length} Niños
+              </span>
+            </div>
+          </motion.div>
+
+          {/* Tarjetas de Métricas de APORTANTES */}
           <motion.div variants={itemVariants} className="grid grid-cols-2 gap-2.5 pt-1 text-center w-full">
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
-              <span className="block text-xs font-bold text-slate-400 uppercase">Confirmados Totales</span>
-              <span className="text-2xl font-black text-white block mt-0.5">{totalConfirmadosGeneral}</span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">
-                ({aportantes.length} Aport. / {invitados.length} Inv. / {ninos.length} Niños)
-              </span>
+              <span className="block text-xs font-bold text-slate-400 uppercase">Aportantes Registrados</span>
+              <span className="text-2xl font-black text-white block mt-0.5">{aportantes.length}</span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">Base para el cálculo de metas</span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
               <span className="block text-xs font-bold text-slate-400 uppercase">Aportes Pagados</span>
               <span className="text-2xl font-black text-emerald-400 block mt-0.5">
-                {cantidadPagadosCompletos} <span className="text-xs text-slate-400 font-normal">/ {aportantes.length}</span>
+                {cantidadAportantesPagados} <span className="text-xs text-slate-400 font-normal">/ {aportantes.length}</span>
               </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">Pagos completos recibidos</span>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-900/90 border border-indigo-500/30">
-              <span className="block text-xs font-bold text-indigo-400 uppercase">Meta Total</span>
+              <span className="block text-xs font-bold text-indigo-400 uppercase">Meta Aportes</span>
               <span className="text-sm sm:text-base font-extrabold text-indigo-200 block mt-0.5">{formatGs(totalMeta)}</span>
             </div>
 
@@ -293,11 +315,11 @@ export default function Home() {
               <span className="text-sm sm:text-base font-extrabold text-emerald-300 block mt-0.5">{formatGs(totalMontoPagado)}</span>
             </div>
 
-            {/* Tarjeta Saldo en Caja */}
+            {/* Total Caja */}
             <div className="col-span-2 p-3.5 rounded-xl bg-cyan-950/30 border border-cyan-500/40 shadow-lg flex items-center justify-between px-4">
               <div className="text-left">
                 <span className="block text-xs font-bold text-cyan-400 uppercase tracking-wider">💵 Total en Caja</span>
-                <span className="text-[10px] text-slate-400 block">Efectivo / Cuenta disponible</span>
+                <span className="text-[10px] text-slate-400 block">Ingresos Aportes - Gastos Registrados</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <span className="text-lg sm:text-xl font-black text-cyan-200">{formatGs(saldoEnCaja)}</span>
@@ -315,7 +337,7 @@ export default function Home() {
             {/* Barra de Progreso */}
             <div className="col-span-2 p-3 rounded-xl bg-slate-900/90 border border-slate-800">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-xs font-bold text-slate-300 uppercase">Progreso de Aportes</span>
+                <span className="text-xs font-bold text-slate-300 uppercase">Progreso de Recaudación Aportantes</span>
                 <span className="text-xs font-extrabold text-emerald-400">{porcentajeProgreso}%</span>
               </div>
               <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
