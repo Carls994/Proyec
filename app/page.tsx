@@ -29,7 +29,6 @@ export default function Home() {
 
   const MONTO_POR_INTEGRANTE = 100000;
   const COSTO_ALQUILER_LOCAL = 1000000;
-  const SENA_LOCAL = 500000;
 
   useEffect(() => {
     async function fetchData() {
@@ -85,8 +84,6 @@ export default function Home() {
   const metaAportes = integrantes.length * MONTO_POR_INTEGRANTE;
   const totalMeta = metaAportes + COSTO_ALQUILER_LOCAL;
   const porcentajeProgreso = totalMeta > 0 ? Math.round((totalMontoPagado / totalMeta) * 100) : 0;
-
-  const saldoPendienteLocal = COSTO_ALQUILER_LOCAL - SENA_LOCAL;
 
   const formatGs = (amount: number) => {
     return new Intl.NumberFormat('es-PY').format(amount) + ' Gs.';
@@ -234,14 +231,9 @@ export default function Home() {
               <span>Alquiler Capricornio</span>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-[10px] uppercase tracking-wider">
-                SEÑADO
-              </span>
-              <span className="font-extrabold text-amber-200 font-mono text-xs whitespace-nowrap">
-                Restante: {formatGs(saldoPendienteLocal)}
-              </span>
-            </div>
+            <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-xs uppercase tracking-wider shrink-0">
+              SEÑADO
+            </span>
           </motion.div>
 
           {/* Tarjetas de Resumen Financiero */}
