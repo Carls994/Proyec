@@ -266,13 +266,13 @@ export default function Home() {
             </span>
           </motion.div>
 
-          {/* BLOQUE PRINCIPAL: Personas Confirmadas para el Evento */}
+          {/* BLOQUE PRINCIPAL: Personas Confirmadas */}
           <motion.div variants={itemVariants} className="p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/50 via-slate-900 to-indigo-950/50 border border-indigo-500/40 text-center shadow-lg">
             <span className="block text-xs font-bold text-indigo-300 uppercase tracking-wider">
-              🎉 Total Personas Confirmadas para el Evento
+              🎉 Total Personas Confirmadas
             </span>
             <span className="text-3xl sm:text-4xl font-black text-white block mt-1">
-              {totalAsistentesEvento} <span className="text-sm font-medium text-slate-400">Asistentes</span>
+              {totalAsistentesEvento}
             </span>
             <div className="flex items-center justify-center gap-2 mt-2 text-xs text-slate-300 font-medium">
               <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-500/30">
