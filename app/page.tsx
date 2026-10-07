@@ -82,7 +82,7 @@ export default function Home() {
   const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
   const saldoEnCaja = totalMontoPagado - totalGastos;
   
-  // Meta calculada únicamente con el aporte por integrante
+  // Meta calculada únicamente por la suma de aportes de los integrantes
   const totalMeta = integrantes.length * MONTO_POR_INTEGRANTE;
   const porcentajeProgreso = totalMeta > 0 ? Math.round((totalMontoPagado / totalMeta) * 100) : 0;
 
@@ -222,17 +222,26 @@ export default function Home() {
             )}
           </motion.div>
 
-          {/* BOX PRINCIPAL: ESTADO DEL ALQUILER DEL LOCAL */}
+          {/* BOX PRINCIPAL: DESGLOSE CLARO DEL ALQUILER DEL LOCAL */}
           <motion.div 
             variants={itemVariants} 
-            className="p-3 rounded-xl bg-purple-950/40 border border-purple-500/50 flex items-center justify-between gap-2 text-xs"
+            className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs"
           >
-            <div className="flex items-center gap-1.5 font-bold text-purple-300 uppercase tracking-tight truncate shrink-0">
-              <span>🏢</span>
-              <span>Alquiler del Local: {formatGs(COSTO_ALQUILER_LOCAL)}</span>
+            <div className="flex flex-col text-left space-y-0.5">
+              <div className="flex items-center gap-1.5 font-bold text-purple-200 uppercase tracking-tight">
+                <span>🏢</span>
+                <span>Alquiler Capricornio</span>
+              </div>
+              <span className="text-[11px] text-slate-300 font-medium">
+                Costo Total: <strong className="text-white">{formatGs(COSTO_ALQUILER_LOCAL)}</strong> 
+                <span className="text-purple-300/60 mx-1">•</span> 
+                Seña: <strong className="text-emerald-300">500.000 Gs.</strong> 
+                <span className="text-purple-300/60 mx-1">•</span> 
+                Saldo: <strong className="text-amber-300">500.000 Gs.</strong>
+              </span>
             </div>
 
-            <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-xs uppercase tracking-wider shrink-0">
+            <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-xs uppercase tracking-wider shrink-0 self-end sm:self-center">
               SEÑADO
             </span>
           </motion.div>
