@@ -81,8 +81,9 @@ export default function Home() {
 
   const totalGastos = gastos.reduce((acc, g) => acc + Number(g.monto || 0), 0);
   const saldoEnCaja = totalMontoPagado - totalGastos;
-  const metaAportes = integrantes.length * MONTO_POR_INTEGRANTE;
-  const totalMeta = metaAportes + COSTO_ALQUILER_LOCAL;
+  
+  // Meta calculada únicamente con el aporte por integrante
+  const totalMeta = integrantes.length * MONTO_POR_INTEGRANTE;
   const porcentajeProgreso = totalMeta > 0 ? Math.round((totalMontoPagado / totalMeta) * 100) : 0;
 
   const formatGs = (amount: number) => {
@@ -228,7 +229,7 @@ export default function Home() {
           >
             <div className="flex items-center gap-1.5 font-bold text-purple-300 uppercase tracking-tight truncate shrink-0">
               <span>🏢</span>
-              <span>Alquiler Capricornio</span>
+              <span>Alquiler Local: {formatGs(COSTO_ALQUILER_LOCAL)}</span>
             </div>
 
             <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-black text-xs uppercase tracking-wider shrink-0">
